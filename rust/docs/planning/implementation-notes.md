@@ -104,6 +104,55 @@ This document captures the collaborative process of designing the Smithy Rust im
    - Namespace-based queries
    - Shape type filtering
 
+### Validation Framework Design
+
+#### Initial Questions
+
+1. **How should the validation framework be structured?**
+   - Discussed approaches for organizing validators and validation logic
+   - Explored different patterns for implementing validators
+
+2. **How should validation events be represented?**
+   - Discussed severity levels and information needed in validation events
+   - Explored how to provide useful error messages and context
+
+3. **Should validation be part of model construction or separate?**
+   - Discussed trade-offs between validating during model construction vs. after
+   - Explored how to handle models with validation errors
+
+4. **How should we handle validators specified in model metadata?**
+   - Discussed how to support validator configuration from metadata
+   - Explored extensibility for custom validators
+
+#### Clarifying Questions and Refinements
+
+1. **On Metadata Validators:**
+   - "The only thing not covered (and it may be ok at this time) is that the metadata section of a model can contain validators"
+   - This led to extending the design to support validators specified in model metadata
+
+#### Key Design Decisions
+
+1. **Trait-Based Validator Approach**: Decided on a trait-based approach for validators
+   - Provides flexibility and extensibility
+   - Allows validators to maintain state if needed
+   - Supports organization by validation domain
+
+2. **Separate Validation from Model Construction**: Decided to keep validation separate from model construction
+   - More flexible for different use cases
+   - Allows working with invalid models when needed
+   - Simplifies the model construction process
+
+3. **Comprehensive Validation Events**: Designed validation events to include:
+   - Severity levels (Error, Warning, Info, Danger)
+   - Associated shape ID
+   - Source location when available
+   - Related events for complex validations
+
+4. **Metadata-Based Validator Configuration**: Added support for configuring validators from model metadata
+   - Built-in validators can be configured via metadata
+   - Custom validators can be specified in metadata
+   - Maintains extensibility of the validation framework
+
 ## Document Organization
 
 During the design process, we identified that the trait implementation was incorrectly placed under the Parser Design section in the detailed design document. We restructured the document to move the trait implementation to the Core Model Representation section where it logically belongs.

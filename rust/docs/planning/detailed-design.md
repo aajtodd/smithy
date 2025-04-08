@@ -919,7 +919,341 @@ The Smithy Rust parser will convert Smithy IDL and JSON AST files into model obj
 
 - How should errors be represented?
 
+## Validation Framework
+
+### Overview
+
+The validation framework ensures that Smithy models conform to the specification and any additional validation rules. It needs to be extensible, provide clear error messages, and support different validation severity levels.
+
+### Design Decisions
+
+We will implement a trait-based validation framework with support for custom validators:
+
+```rust
+#[derive(Clone, Debug)]
+pub enum ValidationSeverity {
+    Error,
+    Warning,
+    Info,
+    Danger,  // For potentially breaking changes
+}
+
+#[derive(Clone, Debug)]
+pub struct ValidationEvent {
+    id: String,           // Unique identifier for the validation rule
+    severity: ValidationSeverity,
+    message: String,      // Human-readable message
+    shape_id: Option<ShapeId>,  // Associated shape if applicable
+    location: Option<SourceLocation>,  // Source location if available
+    related_events: Vec<ValidationEvent>,  // For related issues
+}
+
+impl ValidationEvent {
+    pub fn error(message: impl Into<String>, shape_id: ShapeId) -> Self {
+        Self {
+            id: "".to_string(),  // Can be set later
+            severity: ValidationSeverity::Error,
+            message: message.into(),
+            shape_id: Some(shape_id),
+            location: None,
+            related_events: Vec::new(),
+        }
+    }
+    
+    // Similar constructors for warning, info, etc.
+}
+
+pub trait Validator {
+    fn validate(&self, model: &Model) -> Vec<ValidationEvent>;
+    
+    fn id(&self) -> &str;
+    
+    fn description(&self) -> &str {
+        "No description provided"
+    }
+    
+    // Method to configure the validator from metadata
+    fn configure(&mut self, _config: &MetadataValue) {
+        // Default implementation does nothing
+        // Specific validators can override this to handle configuration
+    }
+}
+
+pub struct ValidatorRegistry {
+    validators: HashMap<String, Box<dyn Validator>>,
+}
+
+impl ValidatorRegistry {
+    pub fn new() -> Self {
+        Self {
+            validators: HashMap::new(),
+        }
+    }
+    
+    pub fn register<V: Validator + 'static>(&mut self, validator: V) {
+        self.validators.insert(validator.id().to_string(), Box::new(validator));
+    }
+    
+    pub fn get_mut(&mut self, id: &str) -> Option<&mut Box<dyn Validator>> {
+        self.validators.get_mut(id)
+    }
+    
+    pub fn validate(&self, model: &Model) -> Vec<ValidationEvent> {
+        let mut events = Vec::new();
+        
+        for validator in self.validators.values() {
+            events.extend(validator.validate(model));
+        }
+        
+        events
+    }
+}
+
+impl Model {
+    pub fn validate(&self) -> Vec<ValidationEvent> {
+        let mut registry = self.create_default_validator_registry();
+        
+        // Add validators from metadata
+        self.add_metadata_validators(&mut registry);
+        
+        registry.validate(self)
+    }
+    
+    pub fn validate_with(&self, registry: &ValidatorRegistry) -> Vec<ValidationEvent> {
+        registry.validate(self)
+    }
+    
+    fn create_default_validator_registry(&self) -> ValidatorRegistry {
+        let mut registry = ValidatorRegistry::new();
+        
+        // Register built-in validators
+        registry.register(ShapeValidators::new());
+        registry.register(TraitValidators::new());
+        registry.register(ServiceValidators::new());
+        // etc.
+        
+        registry
+    }
+    
+    fn add_metadata_validators(&self, registry: &mut ValidatorRegistry) {
+        // Check for validators in metadata
+        if let Some(MetadataValue::Object(validators)) = self.metadata.get("validators") {
+            for (validator_id, config) in validators {
+                // Handle built-in validators with custom configuration
+                if let Some(existing) = registry.get_mut(validator_id) {
+                    existing.configure(config);
+                }
+                
+                // Handle custom validators specified in metadata
+                if let Some(validator) = self.create_validator_from_metadata(validator_id, config) {
+                    registry.register(validator);
+                }
+            }
+        }
+    }
+    
+    fn create_validator_from_metadata(&self, id: &str, config: &MetadataValue) -> Option<Box<dyn Validator>> {
+        // Implementation would depend on how custom validators are registered
+        None
+    }
+}
+
+pub struct ValidationResult {
+    events: Vec<ValidationEvent>,
+}
+
+impl ValidationResult {
+    pub fn new(events: Vec<ValidationEvent>) -> Self {
+        Self { events }
+    }
+    
+    pub fn has_errors(&self) -> bool {
+        self.events.iter().any(|e| matches!(e.severity, ValidationSeverity::Error))
+    }
+    
+    pub fn errors(&self) -> impl Iterator<Item = &ValidationEvent> {
+        self.events.iter().filter(|e| matches!(e.severity, ValidationSeverity::Error))
+    }
+    
+    pub fn warnings(&self) -> impl Iterator<Item = &ValidationEvent> {
+        self.events.iter().filter(|e| matches!(e.severity, ValidationSeverity::Warning))
+    }
+    
+    pub fn format_report(&self) -> String {
+        // Format a human-readable report of validation issues
+        let mut report = String::new();
+        
+        let errors: Vec<_> = self.errors().collect();
+        let warnings: Vec<_> = self.warnings().collect();
+        
+        if !errors.is_empty() {
+            report.push_str(&format!("Found {} validation errors:\n", errors.len()));
+            for (i, error) in errors.iter().enumerate() {
+                report.push_str(&format!("{}. {}\n", i + 1, error.message));
+                if let Some(shape_id) = &error.shape_id {
+                    report.push_str(&format!("   Shape: {}\n", shape_id));
+                }
+            }
+        }
+        
+        if !warnings.is_empty() {
+            if !report.is_empty() {
+                report.push('\n');
+            }
+            report.push_str(&format!("Found {} validation warnings:\n", warnings.len()));
+            for (i, warning) in warnings.iter().enumerate() {
+                report.push_str(&format!("{}. {}\n", i + 1, warning.message));
+                if let Some(shape_id) = &warning.shape_id {
+                    report.push_str(&format!("   Shape: {}\n", shape_id));
+                }
+            }
+        }
+        
+        if report.is_empty() {
+            report.push_str("No validation issues found.");
+        }
+        
+        report
+    }
+}
+```
+
+#### Example Built-in Validator
+
+```rust
+// Example of a built-in validator
+pub struct ShapeValidators;
+
+impl ShapeValidators {
+    pub fn new() -> Self {
+        Self
+    }
+}
+
+impl Validator for ShapeValidators {
+    fn validate(&self, model: &Model) -> Vec<ValidationEvent> {
+        let mut events = Vec::new();
+        
+        // Validate each shape
+        for shape in model.shapes() {
+            // Example validation: Check for empty structure members
+            if let Shape::Structure(structure) = shape {
+                if structure.members().is_empty() {
+                    events.push(ValidationEvent::error(
+                        "Structure must have at least one member",
+                        structure.id().clone(),
+                    ));
+                }
+            }
+            
+            // More validations...
+        }
+        
+        events
+    }
+    
+    fn id(&self) -> &str {
+        "smithy.validators.shape"
+    }
+    
+    fn description(&self) -> &str {
+        "Validates shape constraints defined in the Smithy specification"
+    }
+}
+```
+
+### Alternative Approaches Considered
+
+#### 1. Validator Functions Instead of Trait Objects
+
+```rust
+type ValidatorFn = fn(&Model) -> Vec<ValidationEvent>;
+
+pub struct ValidatorRegistry {
+    validators: Vec<(String, ValidatorFn)>,
+}
+```
+
+**Pros:**
+- No dynamic dispatch overhead
+- Simpler implementation
+
+**Cons:**
+- Less flexibility for validators that need state
+- Harder to implement complex validators
+- Less object-oriented, which might make it harder to organize related validation logic
+
+#### 2. Validation During Model Construction
+
+```rust
+impl ModelBuilder {
+    pub fn build(self) -> Result<Model, ValidationError> {
+        let model = self.create_model();
+        let events = model.validate();
+        
+        if events.iter().any(|e| matches!(e.severity, ValidationSeverity::Error)) {
+            Err(ValidationError::new(events))
+        } else {
+            Ok(model)
+        }
+    }
+}
+```
+
+**Pros:**
+- Ensures models are always valid after construction
+- Prevents invalid models from being created
+
+**Cons:**
+- Less flexibility for use cases that need to work with invalid models
+- May be inefficient for incremental validation during editing
+- Complicates the model construction process
+
+#### 3. Visitor Pattern for Validation
+
+```rust
+pub trait ValidationVisitor {
+    fn visit_structure(&mut self, structure: &StructureShape) -> Vec<ValidationEvent>;
+    fn visit_service(&mut self, service: &ServiceShape) -> Vec<ValidationEvent>;
+    // Methods for other shape types
+}
+
+pub struct Validator {
+    visitors: Vec<Box<dyn ValidationVisitor>>,
+}
+```
+
+**Pros:**
+- Clear separation of validation logic by shape type
+- More structured approach to validation
+- Can optimize validation by shape type
+
+**Cons:**
+- More complex implementation
+- Requires more boilerplate code
+- Less flexible for validations that span multiple shape types
+
+### Rationale for Chosen Approach
+
+We chose the trait-based validator approach for the following reasons:
+
+1. **Extensibility**: The trait-based approach makes it easy to add new validators, both built-in and custom.
+
+2. **Organization**: Validators can be organized logically by validation domain (shapes, traits, services, etc.).
+
+3. **State Management**: Validators can maintain state if needed for complex validations.
+
+4. **Simplicity**: The API is straightforward and easy to understand.
+
+5. **Flexibility**: The approach supports different validation strategies (validate all at once, validate incrementally, etc.).
+
+6. **Separation of Concerns**: Validation is separate from model construction, allowing for more flexible use cases.
+
+7. **Compatibility**: The approach aligns well with how validation works in the Java implementation.
+
+8. **Metadata Support**: The design accommodates validators specified in model metadata, allowing for customization of validation behavior.
+
 ### TODO: Validation
 
-- How should the model support validation?
-- Should validation be built into the model or separate?
+- How should we handle validation of specific shape types?
+- Should we implement a more specialized validation framework for traits?
