@@ -5,6 +5,8 @@ This document outlines the workflow for implementing the Smithy Rust project wit
 ## General Workflow Instructions
 
 * Update the detailed design `detailed-design.md` if we make any changes to the design or architecture as we go
+* Update the implementation notes `implementation-notes.md` with a summary of our discussions and questions as we flesh out the design in a way it can be
+  referenced later for writing about how this project was implemented along the way.
 * Ensure all tests pass before considering a task complete
 * Commit changes to git with a meaningful commit message
 * Stop and wait for feedback before moving to the next task
