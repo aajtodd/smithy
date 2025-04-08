@@ -373,99 +373,6 @@ We chose the identifier-based approach for the following reasons:
 
 6. **Performance Optimization**: We can add caching or indexing to optimize common lookup patterns if needed.
 
-## Parser Design
-
-### Overview
-
-The Smithy Rust parser will convert Smithy IDL and JSON AST files into model objects. The parser will be implemented using Logos for lexing, LALRPOP for parsing, and Ariadne for error reporting.
-
-### Key Components
-
-1. **Lexer Implementation with Logos:**
-   - Define token types based on Smithy specification
-   - Preserve comments and source location information
-   - Handle whitespace appropriately
-
-2. **Parser Implementation with LALRPOP:**
-   - Define grammar rules based on Smithy specification
-   - Optimize for Rust while maintaining clear mapping to specification
-   - Generate a clean AST structure
-
-3. **AST Design:**
-   - Create idiomatic Rust enums and structs
-   - Include source location information for error reporting
-   - Preserve comments for potential formatters
-
-4. **Model Building:**
-   - Implement conversion from AST to final model objects
-   - Resolve references between shapes
-   - Perform initial validation
-
-5. **Error Handling:**
-   - Implement detailed error reporting with Ariadne
-   - Categorize errors for better user experience
-   - Include context in error messages
-
-### Design Decisions
-
-#### AST Structure
-- Implement a separate AST representation from the final model
-- This separation supports maintainability and potential future formatting utilities
-- Resolve shape references during the model building phase, not during parsing
-
-#### Trait Handling
-- Represent trait values generically in the AST
-- Defer validation beyond syntax checking to the model building/validation phase
-
-#### Error Reporting
-- Include surrounding context in error messages
-- Implement error categorization (syntax vs. semantic errors)
-- Leverage Ariadne for rich error diagnostics
-
-#### Component Structure
-- Separate lexing (using Logos), parsing (using LALRPOP), and AST construction
-- Design as distinct components even if they operate in a single pass
-
-#### Performance Measurement
-- Benchmark AST construction and model loading separately
-- Track memory usage
-- Use Criterion crate for benchmarking
-- No immediate need to benchmark against Java implementation
-
-#### Documentation
-- Document primarily for Rust developers based on the specification
-- Add cross-references to Java implementation where helpful for context
-
-#### Large File Handling
-- Design with large model files in mind from the beginning
-
-### Testing Strategy
-- Reuse test models from Java implementation
-- Add Rust-specific unit and integration tests
-- Implement fuzzing tests for the parser
-
-### Implementation Phases
-
-1. **Phase 1: Basic Lexer and Parser**
-   - Implement token definitions with Logos
-   - Create basic LALRPOP grammar for core Smithy syntax
-   - Generate simple AST structures
-
-2. **Phase 2: Complete Parser**
-   - Extend grammar to cover all Smithy syntax
-   - Implement comprehensive AST
-   - Add source tracking and error reporting
-
-3. **Phase 3: Model Building**
-   - Implement conversion from AST to model objects
-   - Add reference resolution
-   - Implement basic validation
-
-4. **Phase 4: Optimization and Testing**
-   - Optimize parser performance
-   - Implement comprehensive test suite
-   - Add benchmarks
-
 ### Trait Implementation
 
 Traits in Smithy are metadata attached to shapes and are identified by their ShapeId. Our implementation needs to balance flexibility, type safety, and performance.
@@ -716,6 +623,101 @@ We chose the hybrid approach for the following reasons:
 6. **Compatibility**: The approach aligns well with the Smithy specification and can handle all trait types.
 
 7. **Ergonomics**: It provides convenient accessors for common traits while still supporting generic access.
+
+## Parser Design
+
+### Overview
+
+The Smithy Rust parser will convert Smithy IDL and JSON AST files into model objects. The parser will be implemented using Logos for lexing, LALRPOP for parsing, and Ariadne for error reporting.
+
+### Key Components
+
+1. **Lexer Implementation with Logos:**
+   - Define token types based on Smithy specification
+   - Preserve comments and source location information
+   - Handle whitespace appropriately
+
+2. **Parser Implementation with LALRPOP:**
+   - Define grammar rules based on Smithy specification
+   - Optimize for Rust while maintaining clear mapping to specification
+   - Generate a clean AST structure
+
+3. **AST Design:**
+   - Create idiomatic Rust enums and structs
+   - Include source location information for error reporting
+   - Preserve comments for potential formatters
+
+4. **Model Building:**
+   - Implement conversion from AST to final model objects
+   - Resolve references between shapes
+   - Perform initial validation
+
+5. **Error Handling:**
+   - Implement detailed error reporting with Ariadne
+   - Categorize errors for better user experience
+   - Include context in error messages
+
+### Design Decisions
+
+#### AST Structure
+- Implement a separate AST representation from the final model
+- This separation supports maintainability and potential future formatting utilities
+- Resolve shape references during the model building phase, not during parsing
+
+#### Trait Handling
+- Represent trait values generically in the AST
+- Defer validation beyond syntax checking to the model building/validation phase
+
+#### Error Reporting
+- Include surrounding context in error messages
+- Implement error categorization (syntax vs. semantic errors)
+- Leverage Ariadne for rich error diagnostics
+
+#### Component Structure
+- Separate lexing (using Logos), parsing (using LALRPOP), and AST construction
+- Design as distinct components even if they operate in a single pass
+
+#### Performance Measurement
+- Benchmark AST construction and model loading separately
+- Track memory usage
+- Use Criterion crate for benchmarking
+- No immediate need to benchmark against Java implementation
+
+#### Documentation
+- Document primarily for Rust developers based on the specification
+- Add cross-references to Java implementation where helpful for context
+
+#### Large File Handling
+- Design with large model files in mind from the beginning
+
+### Testing Strategy
+- Reuse test models from Java implementation
+- Add Rust-specific unit and integration tests
+- Implement fuzzing tests for the parser
+
+### Implementation Phases
+
+1. **Phase 1: Basic Lexer and Parser**
+   - Implement token definitions with Logos
+   - Create basic LALRPOP grammar for core Smithy syntax
+   - Generate simple AST structures
+
+2. **Phase 2: Complete Parser**
+   - Extend grammar to cover all Smithy syntax
+   - Implement comprehensive AST
+   - Add source tracking and error reporting
+
+3. **Phase 3: Model Building**
+   - Implement conversion from AST to model objects
+   - Add reference resolution
+   - Implement basic validation
+
+4. **Phase 4: Optimization and Testing**
+   - Optimize parser performance
+   - Implement comprehensive test suite
+   - Add benchmarks
+
+
 
 ### TODO: Model Container Design
 
