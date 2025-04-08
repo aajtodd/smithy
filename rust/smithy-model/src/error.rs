@@ -7,45 +7,33 @@
 
 use thiserror::Error;
 
-/// Errors that can occur when working with Smithy models.
-#[derive(Error, Debug, Clone, PartialEq, Eq)]
+/// Result type for Smithy model operations.
+pub type Result<T> = std::result::Result<T, Error>;
+
+/// Error type for Smithy model operations.
+#[derive(Error, Debug)]
 pub enum Error {
-    /// Error when a shape ID is invalid.
+    /// Error for invalid shape IDs.
     #[error("Invalid shape ID: {0}")]
     InvalidShapeId(String),
 
-    /// Error when a shape is not found in the model.
+    /// Error for shape not found.
     #[error("Shape not found: {0}")]
     ShapeNotFound(String),
 
-    /// Error when a trait is invalid.
-    #[error("Invalid trait: {0}")]
-    InvalidTrait(String),
+    /// Error for loading models.
+    #[error("Error loading model: {0}")]
+    LoadingError(String),
 
-    /// Error when a model validation fails.
-    #[error("Validation error: {0}")]
-    ValidationError(String),
-
-    /// Error when a selector is invalid.
+    /// Error for invalid selectors.
     #[error("Invalid selector: {0}")]
     InvalidSelector(String),
 
-    /// Error when loading a model.
-    #[error("Model loading error: {0}")]
-    LoadingError(String),
+    /// Error for validation failures.
+    #[error("Validation error: {0}")]
+    ValidationError(String),
 
-    /// Error when an I/O operation fails.
+    /// Error for I/O operations.
     #[error("I/O error: {0}")]
-    Io(String),
-
-    /// Error when parsing JSON.
-    #[error("JSON error: {0}")]
-    Json(String),
-
-    /// Error when converting from AST to model.
-    #[error("AST conversion error: {0}")]
-    AstConversion(String),
+    IoError(#[from] std::io::Error),
 }
-
-/// Result type for Smithy model operations.
-pub type Result<T> = std::result::Result<T, Error>;

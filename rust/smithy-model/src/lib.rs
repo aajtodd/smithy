@@ -13,20 +13,10 @@
 
 //! Core model representation for the Smithy IDL.
 //!
-//! This crate provides the fundamental data structures for representing Smithy models,
-//! including shapes, traits, and their relationships.
+//! This crate provides the core data structures and functionality for working with Smithy models.
 
 pub mod error;
-pub mod loader;
-pub mod model;
-pub mod selector;
-pub mod shape;
 pub mod shape_id;
-pub mod traits;
-pub mod validation;
 
-// Re-export of common types for convenience
-pub use model::Model;
-pub use shape::Shape;
+pub use error::{Error, Result};
 pub use shape_id::ShapeId;
-pub use traits::Trait;
