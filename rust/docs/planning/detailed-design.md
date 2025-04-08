@@ -1257,3 +1257,581 @@ We chose the trait-based validator approach for the following reasons:
 
 - How should we handle validation of specific shape types?
 - Should we implement a more specialized validation framework for traits?
+
+## Selector Implementation
+
+### Overview
+
+The Smithy selector language allows users to query models to find shapes that match specific criteria, similar to how CSS selectors work for HTML. It's a powerful feature that enables filtering, traversal, and projection operations on Smithy models.
+
+### Design Decisions
+
+We will implement a composable, expression-based selector system with both string parsing and programmatic construction:
+
+```rust
+#[derive(Clone, Debug)]
+pub struct Selector {
+    expressions: Vec<SelectorExpression>,
+}
+
+#[derive(Clone, Debug)]
+pub enum SelectorExpression {
+    ShapeType(ShapeTypeSelector),
+    ShapeId(ShapeIdSelector),
+    Namespace(NamespaceSelector),
+    Trait(TraitSelector),
+    Neighbor(NeighborSelector),
+    Projection(ProjectionSelector),
+    And(Vec<SelectorExpression>),
+    Or(Vec<SelectorExpression>),
+    Not(Box<SelectorExpression>),
+}
+
+#[derive(Clone, Debug)]
+pub struct ShapeTypeSelector {
+    shape_type: ShapeType,
+}
+
+#[derive(Clone, Debug)]
+pub struct ShapeIdSelector {
+    pattern: ShapeIdPattern,
+}
+
+#[derive(Clone, Debug)]
+pub struct NamespaceSelector {
+    namespace: String,
+}
+
+#[derive(Clone, Debug)]
+pub struct TraitSelector {
+    trait_id: Option<TraitId>,
+    value_predicate: Option<Box<dyn Fn(&TraitValue) -> bool + Send + Sync>>,
+}
+
+#[derive(Clone, Debug)]
+pub struct NeighborSelector {
+    relationship: NeighborRelationship,
+    target: Box<SelectorExpression>,
+}
+
+#[derive(Clone, Debug)]
+pub enum NeighborRelationship {
+    Member,
+    Target,
+    Input,
+    Output,
+    Error,
+    Resource,
+    Operation,
+    // Other relationships
+}
+
+#[derive(Clone, Debug)]
+pub struct ProjectionSelector {
+    projection: ProjectionType,
+}
+
+#[derive(Clone, Debug)]
+pub enum ProjectionType {
+    Members,
+    MemberNames,
+    MemberValues,
+    // Other projections
+}
+```
+
+#### Selector Parser
+
+```rust
+pub struct SelectorParser;
+
+impl SelectorParser {
+    pub fn parse(input: &str) -> Result<Selector, SelectorParseError> {
+        // Implementation using a parser combinator library like nom
+        // or a custom recursive descent parser
+    }
+}
+
+#[derive(Debug)]
+pub struct SelectorParseError {
+    message: String,
+    position: usize,
+}
+```
+
+#### Selector Evaluation
+
+```rust
+impl Selector {
+    pub fn evaluate(&self, model: &Model) -> Vec<&Shape> {
+        let mut results = Vec::new();
+        
+        for expression in &self.expressions {
+            results.extend(expression.evaluate(model));
+        }
+        
+        // Remove duplicates
+        results.sort_by_key(|shape| shape.id());
+        results.dedup_by_key(|shape| shape.id());
+        
+        results
+    }
+}
+
+impl SelectorExpression {
+    pub fn evaluate(&self, model: &Model) -> Vec<&Shape> {
+        match self {
+            SelectorExpression::ShapeType(selector) => selector.evaluate(model),
+            SelectorExpression::ShapeId(selector) => selector.evaluate(model),
+            SelectorExpression::Namespace(selector) => selector.evaluate(model),
+            SelectorExpression::Trait(selector) => selector.evaluate(model),
+            SelectorExpression::Neighbor(selector) => selector.evaluate(model),
+            SelectorExpression::Projection(selector) => selector.evaluate(model),
+            SelectorExpression::And(expressions) => {
+                let mut results = if let Some(first) = expressions.first() {
+                    first.evaluate(model)
+                } else {
+                    Vec::new()
+                };
+                
+                for expression in expressions.iter().skip(1) {
+                    let next_results = expression.evaluate(model);
+                    results.retain(|shape| next_results.contains(shape));
+                }
+                
+                results
+            },
+            SelectorExpression::Or(expressions) => {
+                let mut results = Vec::new();
+                
+                for expression in expressions {
+                    results.extend(expression.evaluate(model));
+                }
+                
+                // Remove duplicates
+                results.sort_by_key(|shape| shape.id());
+                results.dedup_by_key(|shape| shape.id());
+                
+                results
+            },
+            SelectorExpression::Not(expression) => {
+                let excluded = expression.evaluate(model);
+                model.shapes()
+                    .filter(|shape| !excluded.contains(shape))
+                    .collect()
+            },
+        }
+    }
+}
+```
+
+#### Selector Builder API
+
+```rust
+pub struct SelectorBuilder {
+    expressions: Vec<SelectorExpression>,
+}
+
+impl SelectorBuilder {
+    pub fn new() -> Self {
+        Self {
+            expressions: Vec::new(),
+        }
+    }
+    
+    pub fn shape_type(mut self, shape_type: ShapeType) -> Self {
+        self.expressions.push(SelectorExpression::ShapeType(ShapeTypeSelector {
+            shape_type,
+        }));
+        self
+    }
+    
+    pub fn shape_id(mut self, pattern: impl Into<ShapeIdPattern>) -> Self {
+        self.expressions.push(SelectorExpression::ShapeId(ShapeIdSelector {
+            pattern: pattern.into(),
+        }));
+        self
+    }
+    
+    pub fn namespace(mut self, namespace: impl Into<String>) -> Self {
+        self.expressions.push(SelectorExpression::Namespace(NamespaceSelector {
+            namespace: namespace.into(),
+        }));
+        self
+    }
+    
+    pub fn has_trait(mut self, trait_id: impl Into<TraitId>) -> Self {
+        self.expressions.push(SelectorExpression::Trait(TraitSelector {
+            trait_id: Some(trait_id.into()),
+            value_predicate: None,
+        }));
+        self
+    }
+    
+    pub fn build(self) -> Selector {
+        Selector {
+            expressions: self.expressions,
+        }
+    }
+}
+```
+
+#### Model Integration with Flexible API
+
+```rust
+// Conversion traits for flexible API
+impl From<&str> for Selector {
+    fn from(s: &str) -> Self {
+        SelectorParser::parse(s).unwrap_or_else(|_| Selector { expressions: Vec::new() })
+    }
+}
+
+impl From<String> for Selector {
+    fn from(s: String) -> Self {
+        Self::from(s.as_str())
+    }
+}
+
+// TryFrom for fallible conversions
+impl TryFrom<&str> for Selector {
+    type Error = SelectorParseError;
+    
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        SelectorParser::parse(s)
+    }
+}
+
+impl TryFrom<String> for Selector {
+    type Error = SelectorParseError;
+    
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        Self::try_from(s.as_str())
+    }
+}
+
+// Model integration
+impl Model {
+    pub fn select<S: Into<Selector>>(&self, selector: S) -> Vec<&Shape> {
+        let selector = selector.into();
+        selector.evaluate(self)
+    }
+    
+    pub fn try_select<S: TryInto<Selector>>(&self, selector: S) -> Result<Vec<&Shape>, S::Error> {
+        let selector = selector.try_into()?;
+        Ok(selector.evaluate(self))
+    }
+}
+```
+
+### Alternative Approaches Considered
+
+#### 1. Visitor-Based Evaluation
+
+```rust
+pub trait SelectorVisitor {
+    fn visit_shape(&mut self, shape: &Shape) -> bool;
+}
+
+impl Selector {
+    pub fn evaluate_with_visitor(&self, model: &Model, visitor: &mut dyn SelectorVisitor) {
+        for shape in model.shapes() {
+            if self.matches(shape) {
+                visitor.visit_shape(shape);
+            }
+        }
+    }
+}
+```
+
+**Pros:**
+- More efficient for large models when only processing is needed, not collection
+- Allows for early termination
+- Can avoid allocating a result vector
+
+**Cons:**
+- More complex API
+- Less flexible for common use cases
+- Requires implementing a visitor for each use case
+
+#### 2. Iterator-Based API
+
+```rust
+pub struct SelectorIter<'a> {
+    model: &'a Model,
+    selector: &'a Selector,
+    index: usize,
+    matches: Vec<&'a Shape>,
+}
+
+impl<'a> Iterator for SelectorIter<'a> {
+    type Item = &'a Shape;
+    
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index < self.matches.len() {
+            let shape = self.matches[self.index];
+            self.index += 1;
+            Some(shape)
+        } else {
+            None
+        }
+    }
+}
+
+impl Model {
+    pub fn select_iter<'a>(&'a self, selector: &'a Selector) -> SelectorIter<'a> {
+        let matches = selector.evaluate(self);
+        SelectorIter {
+            model: self,
+            selector,
+            index: 0,
+            matches,
+        }
+    }
+}
+```
+
+**Pros:**
+- More idiomatic Rust API
+- Allows for chaining with other iterators
+- Familiar to Rust developers
+
+**Cons:**
+- Still requires collecting all matches upfront
+- More complex implementation
+- Potential lifetime issues
+
+#### 3. Compiled Selectors
+
+```rust
+pub struct CompiledSelector {
+    matcher: Box<dyn Fn(&Shape) -> bool>,
+}
+
+impl CompiledSelector {
+    pub fn compile(selector: &str) -> Result<Self, SelectorParseError> {
+        let parsed = SelectorParser::parse(selector)?;
+        
+        // Convert the parsed selector into an optimized function
+        let matcher = Box::new(move |shape: &Shape| {
+            // Optimized matching logic
+            true
+        });
+        
+        Ok(Self { matcher })
+    }
+    
+    pub fn matches(&self, shape: &Shape) -> bool {
+        (self.matcher)(shape)
+    }
+    
+    pub fn evaluate(&self, model: &Model) -> Vec<&Shape> {
+        model.shapes().filter(|shape| self.matches(shape)).collect()
+    }
+}
+```
+
+**Pros:**
+- Potentially more efficient for repeated evaluations
+- Can optimize the selector based on its structure
+- Separates parsing from evaluation
+
+**Cons:**
+- More complex implementation
+- Harder to debug
+- Less flexible for dynamic selectors
+
+#### 4. Separate APIs for String and Programmatic Selectors
+
+```rust
+impl Model {
+    pub fn select(&self, selector: &str) -> Result<Vec<&Shape>, SelectorError> {
+        let selector = SelectorParser::parse(selector)?;
+        Ok(selector.evaluate(self))
+    }
+    
+    pub fn select_with(&self, selector: &Selector) -> Vec<&Shape> {
+        selector.evaluate(self)
+    }
+}
+```
+
+**Pros:**
+- Clear distinction between string-based and programmatic selectors
+- More explicit error handling for string parsing
+- Simpler implementation
+
+**Cons:**
+- Duplicated API methods
+- Less flexible
+- Not as idiomatic in Rust
+
+### Rationale for Chosen Approach
+
+We chose the expression-based approach with flexible API integration for the following reasons:
+
+1. **Simplicity**: The approach is straightforward and easy to understand.
+
+2. **Flexibility**: It supports all selector features while remaining extensible.
+
+3. **Composability**: Selectors can be composed from smaller expressions.
+
+4. **Builder API**: Provides a type-safe way to construct selectors programmatically.
+
+5. **String Parsing**: Supports parsing selectors from strings for dynamic use cases.
+
+6. **Ergonomic API**: The use of `Into<Selector>` and `TryInto<Selector>` provides a flexible and idiomatic Rust API.
+
+7. **Consistency**: Aligns with how selectors work in the Java implementation.
+
+8. **Performance**: While not the most optimized approach, it's efficient enough for most use cases and can be optimized later if needed.
+
+9. **Maintainability**: The clear structure makes it easier to maintain and extend.
+
+### Selector Parser Implementation
+
+For parsing selector expressions, we'll use LALRPOP, the same parser generator we're using for the Smithy IDL syntax. This ensures consistency across our codebase and reduces dependencies.
+
+```rust
+// selector.lalrpop
+use crate::model::selector::{Selector, SelectorExpression, ShapeTypeSelector, TraitSelector, /* ... */};
+use crate::model::{ShapeType, TraitId};
+
+grammar;
+
+pub Selector: Selector = {
+    <expressions:SelectorExpressionList> => Selector { expressions },
+};
+
+SelectorExpressionList: Vec<SelectorExpression> = {
+    <e:SelectorExpression> => vec![e],
+    <mut v:SelectorExpressionList> "," <e:SelectorExpression> => {
+        v.push(e);
+        v
+    }
+};
+
+SelectorExpression: SelectorExpression = {
+    ShapeTypeSelector,
+    ShapeIdSelector,
+    NamespaceSelector,
+    TraitSelector,
+    NeighborSelector,
+    ProjectionSelector,
+    LogicalSelector,
+};
+
+// Shape type selectors (e.g., "structure", "service")
+ShapeTypeSelector: SelectorExpression = {
+    <s:r"[a-zA-Z_][a-zA-Z0-9_]*"> => {
+        let shape_type = match s {
+            "boolean" => ShapeType::Boolean,
+            "byte" => ShapeType::Byte,
+            "short" => ShapeType::Short,
+            "integer" => ShapeType::Integer,
+            "long" => ShapeType::Long,
+            "float" => ShapeType::Float,
+            "double" => ShapeType::Double,
+            "string" => ShapeType::String,
+            "blob" => ShapeType::Blob,
+            "timestamp" => ShapeType::Timestamp,
+            "list" => ShapeType::List,
+            "set" => ShapeType::Set,
+            "map" => ShapeType::Map,
+            "structure" => ShapeType::Structure,
+            "union" => ShapeType::Union,
+            "service" => ShapeType::Service,
+            "operation" => ShapeType::Operation,
+            "resource" => ShapeType::Resource,
+            "member" => ShapeType::Member,
+            _ => return SelectorExpression::ShapeId(ShapeIdSelector {
+                pattern: ShapeIdPattern::from_str(s).unwrap(),
+            }),
+        };
+        SelectorExpression::ShapeType(ShapeTypeSelector { shape_type })
+    }
+};
+
+// Trait selectors (e.g., "[trait]", "[trait|required]")
+TraitSelector: SelectorExpression = {
+    "[" "trait" "]" => SelectorExpression::Trait(TraitSelector {
+        trait_id: None,
+        value_predicate: None,
+    }),
+    "[" "trait" "|" <id:TraitId> "]" => SelectorExpression::Trait(TraitSelector {
+        trait_id: Some(id),
+        value_predicate: None,
+    }),
+};
+
+// Additional grammar rules for other selector types...
+```
+
+The parser implementation will integrate with LALRPOP:
+
+```rust
+use lalrpop_util::lalrpop_mod;
+
+// Include the generated parser
+lalrpop_mod!(pub selector_parser);
+
+pub struct SelectorParser;
+
+impl SelectorParser {
+    pub fn parse(input: &str) -> Result<Selector, SelectorParseError> {
+        match selector_parser::SelectorParser::new().parse(input) {
+            Ok(selector) => Ok(selector),
+            Err(err) => {
+                // Convert LALRPOP error to our error type
+                let (position, message) = match &err {
+                    lalrpop_util::ParseError::InvalidToken { location } => 
+                        (*location, "Invalid token".to_string()),
+                    lalrpop_util::ParseError::UnrecognizedEOF { location, expected } => 
+                        (*location, format!("Unexpected end of input, expected: {:?}", expected)),
+                    lalrpop_util::ParseError::UnrecognizedToken { token, expected } => 
+                        (token.0, format!("Unexpected token '{}', expected: {:?}", token.1, expected)),
+                    lalrpop_util::ParseError::ExtraToken { token } => 
+                        (token.0, format!("Extra token: '{}'", token.1)),
+                    lalrpop_util::ParseError::User { error } => 
+                        (0, format!("Custom error: {:?}", error)),
+                };
+                
+                Err(SelectorParseError {
+                    message,
+                    position,
+                    context: None,
+                })
+            }
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct SelectorParseError {
+    message: String,
+    position: usize,
+    context: Option<String>,
+}
+
+impl SelectorParseError {
+    pub fn with_context(mut self, input: &str) -> Self {
+        let start = self.position.saturating_sub(10);
+        let end = (self.position + 10).min(input.len());
+        let context = input[start..end].to_string();
+        let pointer_pos = self.position - start;
+        
+        let mut pointer = " ".repeat(pointer_pos);
+        pointer.push('^');
+        
+        self.context = Some(format!("{}\n{}", context, pointer));
+        self
+    }
+}
+```
+
+This approach provides several benefits:
+
+1. **Consistency**: Uses the same parser technology (LALRPOP) as the IDL parser
+2. **Reuse**: Leverages existing parser infrastructure and knowledge
+3. **Maintainability**: Fewer dependencies to manage
+4. **Integration**: Potential for sharing grammar components between parsers
+5. **Error Reporting**: LALRPOP provides good error reporting capabilities

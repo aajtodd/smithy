@@ -153,6 +153,56 @@ This document captures the collaborative process of designing the Smithy Rust im
    - Custom validators can be specified in metadata
    - Maintains extensibility of the validation framework
 
+### Selector Implementation Design
+
+#### Initial Questions
+
+1. **How should the selector language be implemented in Rust?**
+   - Discussed approaches for representing and evaluating selector expressions
+   - Explored different patterns for implementing the selector parser and evaluator
+
+2. **What API should we provide for using selectors?**
+   - Discussed how users would interact with selectors
+   - Explored different API designs for querying models with selectors
+
+3. **How should we handle performance for large models?**
+   - Discussed optimization strategies for selector evaluation
+   - Explored trade-offs between simplicity and performance
+
+#### Clarifying Questions and Refinements
+
+1. **On Model Integration APIs:**
+   - "The model integration APIs could make use of `impl Into<Selector>` rather than having separate APIs for `select` and `select_with`."
+   - This led to a more flexible and ergonomic API design using Rust's trait system
+
+#### Selector Parsing Approach
+
+1. **On Parser Technology Choice:**
+   - "We are already planning on using LALRPOP for parsing the smithy IDL syntax, is there a good reason to add a new dependency on `nom` here?"
+   - This led to revising our approach to use LALRPOP for selector parsing as well, maintaining consistency and reducing dependencies
+
+#### Key Design Decisions
+
+1. **Expression-Based Selector Representation**: Decided on a composable, expression-based approach
+   - Represents selectors as a tree of expressions
+   - Supports all selector features in the specification
+   - Enables both parsing from strings and programmatic construction
+
+2. **LALRPOP for Selector Parsing**: Chose to use LALRPOP for parsing selector expressions
+   - Maintains consistency with IDL parsing approach
+   - Reduces dependencies by using the same parser technology
+   - Leverages existing knowledge and infrastructure
+
+3. **Flexible API with Into/TryInto**: Chose to use Rust's trait system for a more ergonomic API
+   - Implemented `From<&str>` and `TryFrom<&str>` for `Selector`
+   - Allows passing either strings or `Selector` objects to the same methods
+   - Provides both infallible and fallible conversion options
+
+4. **Builder Pattern for Programmatic Construction**: Implemented a builder API for creating selectors
+   - Type-safe way to construct selectors programmatically
+   - Fluent interface for better readability
+   - Avoids string parsing for programmatically created selectors
+
 ## Document Organization
 
 During the design process, we identified that the trait implementation was incorrectly placed under the Parser Design section in the detailed design document. We restructured the document to move the trait implementation to the Core Model Representation section where it logically belongs.
