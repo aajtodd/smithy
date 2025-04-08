@@ -465,60 +465,257 @@ The Smithy Rust parser will convert Smithy IDL and JSON AST files into model obj
    - Optimize parser performance
    - Implement comprehensive test suite
    - Add benchmarks
-### Trait Implementation (WIP)
 
-We're currently evaluating approaches for implementing Smithy traits in Rust. Traits in Smithy are metadata attached to shapes and are identified by their ShapeId.
+### Trait Implementation
 
-#### Current Recommendation (Draft)
+Traits in Smithy are metadata attached to shapes and are identified by their ShapeId. Our implementation needs to balance flexibility, type safety, and performance.
 
-A generic map-based approach with typed accessor methods for common traits:
+#### Design Decisions
+
+We will implement a hybrid approach that supports both dynamic model loading and type-safe programmatic model building:
 
 ```rust
-struct Traits {
-    values: HashMap<ShapeId, serde_json::Value>,
+// Core trait representation
+pub struct Trait {
+    id: TraitId,
+    value: TraitValue,
 }
 
-impl Traits {
-    pub fn has(&self, id: &ShapeId) -> bool {
-        self.values.contains_key(id)
+// Trait value representation
+pub enum TraitValue {
+    Bool(bool),
+    String(String),
+    Number(f64),
+    Array(Vec<TraitValue>),
+    Object(HashMap<String, TraitValue>),
+}
+
+// Container for traits attached to a shape
+pub struct TraitContainer {
+    traits: HashMap<TraitId, Trait>,
+}
+
+impl TraitContainer {
+    // Dynamic API for model loading
+    pub fn apply(&mut self, trait_: Trait) -> Result<(), TraitApplicationError> {
+        // Implementation
+        self.traits.insert(trait_.id.clone(), trait_);
+        Ok(())
     }
     
-    pub fn get(&self, id: &ShapeId) -> Option<&serde_json::Value> {
-        self.values.get(id)
+    // Generic getter
+    pub fn get(&self, id: &TraitId) -> Option<&Trait> {
+        self.traits.get(id)
     }
     
-    pub fn get_as<T: DeserializeOwned>(&self, id: &ShapeId) -> Result<T, TraitError> {
-        match self.get(id) {
-            Some(value) => serde_json::from_value(value.clone()).map_err(TraitError::DeserializationError),
-            None => Err(TraitError::TraitNotFound(id.clone())),
-        }
+    // Type-safe API for programmatic use
+    pub fn apply_typed<T: SmithyTrait>(&mut self, trait_value: T) -> Result<(), TraitApplicationError> {
+        self.apply(Trait::new(T::trait_id(), trait_value.as_trait_value()))
+    }
+    
+    // Type-safe getter for programmatic use
+    pub fn get_typed<T: SmithyTrait>(&self) -> Option<T> {
+        self.get(&T::trait_id()).and_then(|t| T::from_trait(t))
     }
     
     // Common trait accessors
     pub fn documentation(&self) -> Option<String> {
-        let doc_id = ShapeId::new("smithy.api", "documentation");
-        self.get_as::<String>(&doc_id).ok()
+        let doc_id = TraitId::new_builtin("documentation");
+        self.get(&doc_id).and_then(|t| {
+            if let TraitValue::String(s) = &t.value {
+                Some(s.clone())
+            } else {
+                None
+            }
+        })
     }
     
     pub fn is_required(&self) -> bool {
-        let required_id = ShapeId::new("smithy.api", "required");
-        self.has(&required_id)
+        let required_id = TraitId::new_builtin("required");
+        self.traits.contains_key(&required_id)
+    }
+}
+
+// Trait for type-safe trait implementations
+pub trait SmithyTrait: Sized {
+    fn trait_id() -> TraitId;
+    fn as_trait_value(&self) -> TraitValue;
+    fn from_trait(trait_: &Trait) -> Option<Self>;
+}
+
+// Example implementation for a specific trait
+pub struct Documentation(String);
+
+impl SmithyTrait for Documentation {
+    fn trait_id() -> TraitId {
+        TraitId::new_builtin("documentation")
+    }
+    
+    fn as_trait_value(&self) -> TraitValue {
+        TraitValue::String(self.0.clone())
+    }
+    
+    fn from_trait(trait_: &Trait) -> Option<Self> {
+        if let TraitValue::String(s) = &trait_.value {
+            Some(Documentation(s.clone()))
+        } else {
+            None
+        }
     }
 }
 ```
 
-#### Alternative Approaches Under Consideration
+#### Trait Conflicts and Validation
 
-1. **Strongly-Typed Traits with Enum**
-2. **Hybrid Approach with Known Traits**
+Trait conflicts and validation will be handled during the model validation phase rather than during parsing:
 
-#### TODO: Complete Trait Implementation Design
+```rust
+// During model validation
+pub struct TraitConflictValidator;
 
-- Finalize the approach for trait implementation
-- Document the rationale for the chosen approach
-- Add examples of how common traits will be accessed
-- Address performance considerations for trait access
-- Consider serialization/deserialization requirements
+impl Validator for TraitConflictValidator {
+    fn validate(&self, model: &Model) -> Vec<ValidationEvent> {
+        let mut events = Vec::new();
+        
+        // Check each shape for trait conflicts
+        for shape in model.shapes() {
+            let traits = shape.traits();
+            
+            // Check each trait against others for conflicts
+            for (id1, trait1) in traits.iter() {
+                if let Some(conflicts) = self.get_trait_conflicts(id1) {
+                    for conflict_id in conflicts {
+                        if traits.contains_key(conflict_id) {
+                            events.push(ValidationEvent::error(
+                                format!("Trait {} conflicts with {}", id1, conflict_id),
+                                shape.id().clone(),
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+        
+        events
+    }
+    
+    fn get_trait_conflicts(&self, trait_id: &TraitId) -> Option<&[TraitId]> {
+        // Implementation would look up conflicts for the given trait
+        // This could be from built-in knowledge or loaded from trait definitions
+        // ...
+    }
+}
+```
+
+#### Serialization and Deserialization
+
+For serialization and deserialization, we'll use serde:
+
+```rust
+// For JSON AST parsing
+impl ModelLoader {
+    fn parse_shape_from_json(&mut self, json: &serde_json::Value) -> Result<(), LoaderError> {
+        let shape_id = json.get("id")
+            .and_then(|v| v.as_str())
+            .ok_or(LoaderError::MissingShapeId)?;
+        
+        let shape_type = json.get("type")
+            .and_then(|v| v.as_str())
+            .ok_or(LoaderError::MissingShapeType)?;
+        
+        let mut shape = self.create_shape(shape_id, shape_type)?;
+        
+        // Parse traits (prefixed with $ in JSON AST)
+        for (key, value) in json.as_object().unwrap() {
+            if key.starts_with('$') {
+                let trait_id = TraitId::from_str(&key[1..])?; // Remove $ prefix
+                let trait_value = self.parse_trait_value(value)?;
+                shape.apply_trait(Trait::new(trait_id, trait_value));
+            }
+        }
+        
+        self.shapes.insert(shape.id().clone(), shape);
+        Ok(())
+    }
+}
+```
+
+#### Alternative Approaches Considered
+
+1. **Dynamic Approach**
+
+A purely dynamic approach with runtime validation:
+
+```rust
+pub struct TraitContainer {
+    traits: HashMap<TraitId, Trait>,
+}
+
+impl TraitContainer {
+    pub fn apply(&mut self, trait_: Trait, shape: &Shape) -> Result<(), TraitApplicationError> {
+        // Runtime validation of trait application
+        validate_trait_application(&trait_, shape)?;
+        self.traits.insert(trait_.id.clone(), trait_);
+        Ok(())
+    }
+}
+```
+
+**Pros:**
+- Simpler implementation
+- More flexible for dynamic loading
+- Easier to extend with new traits
+
+**Cons:**
+- Less type safety
+- No compile-time checks
+- Less ergonomic for programmatic use
+
+2. **Type-Safe Approach**
+
+A strongly typed approach using Rust's type system:
+
+```rust
+pub trait StructureShape {}
+pub trait ServiceShape {}
+
+pub trait StructureOnlyTrait: SmithyTrait {}
+
+impl<T: StructureShape> Shape<T> {
+    pub fn apply_structure_trait<S: StructureOnlyTrait>(&mut self, trait_: S) -> Result<(), TraitApplicationError> {
+        // No need to check if this is a structure - the type system ensures it
+        self.apply_trait(trait_)
+    }
+}
+```
+
+**Pros:**
+- Strong compile-time guarantees
+- Better IDE support
+- More ergonomic for programmatic use
+
+**Cons:**
+- Complex implementation
+- Difficult to use for dynamic loading
+- Requires extensive type definitions
+
+#### Rationale for Chosen Approach
+
+We chose the hybrid approach for the following reasons:
+
+1. **Flexibility**: It supports both dynamic loading from files and type-safe programmatic model building.
+
+2. **Simplicity**: The core representation is straightforward and easy to understand.
+
+3. **Separation of Concerns**: Parsing is separated from validation, allowing for better error reporting.
+
+4. **Performance**: The approach minimizes allocations and copies while still providing type safety where possible.
+
+5. **Extensibility**: It's easy to add new traits and trait validators.
+
+6. **Compatibility**: The approach aligns well with the Smithy specification and can handle all trait types.
+
+7. **Ergonomics**: It provides convenient accessors for common traits while still supporting generic access.
 
 ### TODO: Model Container Design
 
