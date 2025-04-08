@@ -10,7 +10,9 @@ This document outlines the workflow for implementing the Smithy Rust project wit
 * Ensure all tests pass before considering a task complete
 * Commit changes to git with a meaningful commit message
 * Stop and wait for feedback before moving to the next task
-
+* **Always confirm planned changes before executing them** - outline the changes and get approval before proceeding
+* **Make small, focused changes** rather than large scaffolding operations
+* **Preview code changes** before applying them, especially for file creation or modification
 
 ## 1. Task Definition
 
@@ -133,3 +135,49 @@ Track tasks using:
 6. **Document the API** with examples
 7. **Integrate with other components** as needed
 8. **Review and refine** based on feedback
+
+## 8. Code Generation and Implementation Guidelines
+
+### 8.1 Incremental Implementation
+
+- **Confirm Before Executing**: Always confirm planned changes before executing them
+- **Small, Focused Changes**: Make small, focused changes rather than large scaffolding operations
+- **Review Before Implementation**: Outline the planned implementation and get approval before proceeding
+- **Step-by-Step Approach**: Break down implementation into smaller steps with clear checkpoints
+
+### 8.2 Code Review Process
+
+- **Preview Changes**: Generate a preview of changes before applying them
+- **Explain Rationale**: Explain the rationale behind implementation choices
+- **Highlight Alternatives**: Discuss alternative approaches that were considered
+- **Document Trade-offs**: Document any trade-offs made in the implementation
+
+## 9. Code Quality Standards
+
+### 9.1 Code Formatting and Style
+
+- **Use Cargo Fmt**: All code must be formatted with `cargo fmt` before committing
+- **Run Clippy**: Use `cargo clippy` to catch common mistakes and improve code quality
+- **Pass Tests**: All tests must pass with `cargo test --all-features` before committing
+
+### 9.2 Documentation and Warnings
+
+- **Include License Header**: All source files must include the following license header:
+  ```rust
+  /*
+   * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+   * SPDX-License-Identifier: Apache-2.0
+   */
+  ```
+- **Enable Warnings and Doc Features**: All crate root files (lib.rs) must include:
+  ```rust
+  #![warn(
+      missing_docs,
+      rustdoc::missing_crate_level_docs,
+      unreachable_pub,
+      rust_2018_idioms
+  )]
+  #![cfg_attr(docsrs, feature(doc_auto_cfg))]
+  ```
+- **Document Public API**: All public items must have documentation comments
+- **Include Examples**: Include examples in documentation for complex functionality

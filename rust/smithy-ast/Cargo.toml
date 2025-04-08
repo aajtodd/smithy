@@ -1,0 +1,10 @@
+[package]
+name = "smithy-ast"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+description = "AST representation and parser for the Smithy IDL"
+repository = "https://github.com/smithy-lang/smithy"
+
+[dependencies]
+thiserror = "1.0"

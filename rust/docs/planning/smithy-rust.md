@@ -33,6 +33,36 @@ write an equivalent in the Rust programming language.
   * `/smithy-model/src/main/java/software/amazon/smithy/model/selector/` - Selector implementation
   * `/smithy-cli/src/main/java/software/amazon/smithy/cli/` - CLI implementation
 
+## Project Structure
+
+The Smithy Rust implementation is organized into the following crates:
+
+```
+/rust/
+├── Cargo.toml                 # Workspace configuration
+├── smithy-ast/                # AST representation and IDL parser
+│   ├── Cargo.toml
+│   └── src/
+│       ├── lib.rs             # Main library entry point
+│       ├── error.rs           # Error types for parsing operations
+│       ├── ast.rs             # AST data structures
+│       └── parser.rs          # Parser implementation
+└── smithy-model/              # Semantic model
+    ├── Cargo.toml
+    └── src/
+        ├── lib.rs             # Main library entry point
+        ├── error.rs           # Error types for model operations
+        ├── shape_id.rs        # ShapeId implementation
+        ├── shape.rs           # Shape implementations
+        ├── traits.rs          # Trait implementations
+        ├── model.rs           # Model implementation
+        ├── loader.rs          # Model loading from AST and JSON
+        ├── validation.rs      # Validation framework
+        └── selector.rs        # Selector implementation
+```
+
+This separation allows the parser to focus solely on syntax without worrying about semantic validation, while the model can focus on the semantic representation and operations.
+
 ## Architecture Overview
 
 The Smithy Rust implementation will need to provide equivalent functionality to the Java implementation, including:
