@@ -624,6 +624,193 @@ We chose the hybrid approach for the following reasons:
 
 7. **Ergonomics**: It provides convenient accessors for common traits while still supporting generic access.
 
+### Model Container Design
+
+The Model container is a key component of the core model representation, responsible for organizing, indexing, and providing access to shapes.
+
+#### Design Decisions
+
+We will implement an immutable Model container with efficient lookup capabilities:
+
+```rust
+pub struct Model {
+    // Primary storage of shapes
+    shapes: HashMap<ShapeId, Shape>,
+    
+    // Indexes for efficient lookups
+    namespace_index: HashMap<String, Vec<ShapeId>>,
+    shape_type_index: HashMap<ShapeType, Vec<ShapeId>>,
+    
+    // Metadata
+    smithy_version: String,
+    metadata: HashMap<String, MetadataValue>,
+}
+
+impl Model {
+    // Basic shape access
+    pub fn get_shape(&self, id: &ShapeId) -> Option<&Shape> {
+        self.shapes.get(id)
+    }
+    
+    // Namespace-based queries
+    pub fn get_shapes_in_namespace(&self, namespace: &str) -> Vec<&Shape> {
+        self.namespace_index.get(namespace)
+            .map_or(Vec::new(), |ids| {
+                ids.iter()
+                   .filter_map(|id| self.get_shape(id))
+                   .collect()
+            })
+    }
+    
+    // Type-based queries
+    pub fn get_shapes_of_type(&self, shape_type: ShapeType) -> Vec<&Shape> {
+        self.shape_type_index.get(&shape_type)
+            .map_or(Vec::new(), |ids| {
+                ids.iter()
+                   .filter_map(|id| self.get_shape(id))
+                   .collect()
+            })
+    }
+    
+    // Helper methods for common operations
+    pub fn get_services(&self) -> Vec<&ServiceShape> {
+        self.get_shapes_of_type(ShapeType::Service)
+            .into_iter()
+            .filter_map(|shape| {
+                if let Shape::Service(service) = shape {
+                    Some(service)
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+}
+```
+
+For model construction and transformation, we'll use a builder pattern:
+
+```rust
+pub struct ModelBuilder {
+    shapes: HashMap<ShapeId, Shape>,
+    metadata: HashMap<String, MetadataValue>,
+}
+
+impl ModelBuilder {
+    pub fn new() -> Self {
+        Self {
+            shapes: HashMap::new(),
+            metadata: HashMap::new(),
+        }
+    }
+    
+    pub fn from(model: &Model) -> Self {
+        Self {
+            shapes: model.shapes.clone(),
+            metadata: model.metadata.clone(),
+        }
+    }
+    
+    pub fn add_shape(&mut self, shape: Shape) -> Result<&mut Self, ModelError> {
+        let id = shape.id().clone();
+        if self.shapes.contains_key(&id) {
+            return Err(ModelError::DuplicateShape(id));
+        }
+        self.shapes.insert(id, shape);
+        Ok(self)
+    }
+    
+    pub fn build(self) -> Result<Model, ModelError> {
+        // Build indexes and validate before returning
+        // ...
+    }
+}
+
+// Example of model transformation
+impl Model {
+    pub fn with_added_shape(&self, shape: Shape) -> Result<Model, ModelError> {
+        let mut builder = ModelBuilder::from(self);
+        builder.add_shape(shape)?;
+        builder.build()
+    }
+}
+```
+
+#### Alternative Approaches Considered
+
+1. **Mutable Model**
+
+```rust
+pub struct Model {
+    shapes: HashMap<ShapeId, Shape>,
+    // Other fields
+}
+
+impl Model {
+    pub fn add_shape(&mut self, shape: Shape) -> Result<(), ModelError> {
+        // Implementation
+    }
+    
+    pub fn remove_shape(&mut self, id: &ShapeId) {
+        // Implementation
+    }
+}
+```
+
+**Pros:**
+- Simpler API for modifications
+- More efficient for multiple changes
+- Familiar to users of other mutable APIs
+
+**Cons:**
+- Thread safety concerns
+- More complex reasoning about state
+- Potential for inconsistent state
+- Need for validation after changes
+
+2. **Hybrid Approach with Internal Mutability**
+
+```rust
+pub struct Model {
+    inner: RefCell<ModelInner>,
+}
+
+impl Model {
+    pub fn add_shape(&self, shape: Shape) -> Result<(), ModelError> {
+        self.inner.borrow_mut().add_shape(shape)
+    }
+}
+```
+
+**Pros:**
+- Appears immutable from outside
+- Can optimize internal operations
+- Familiar API
+
+**Cons:**
+- Runtime borrow checking
+- Potential panics
+- Still has thread safety issues
+- More complex implementation
+
+#### Rationale for Chosen Approach
+
+We chose the immutable model with builder pattern for the following reasons:
+
+1. **Thread Safety**: The immutable model can be safely shared across threads without locks.
+
+2. **Reasoning**: It's easier to reason about code when models can't change unexpectedly.
+
+3. **Consistency**: The model is always in a valid state after construction.
+
+4. **Caching**: Results of computations can be safely cached without invalidation concerns.
+
+5. **Functional Style**: Aligns well with functional programming patterns in Rust.
+
+6. **Performance**: While transformations require copying, most use cases involve reading rather than modifying models.
+
+7. **Simplicity**: Avoids complex state management and validation logic after modifications.
+
 ## Parser Design
 
 ### Overview
@@ -718,19 +905,6 @@ The Smithy Rust parser will convert Smithy IDL and JSON AST files into model obj
    - Add benchmarks
 
 
-
-### TODO: Model Container Design
-
-- How should the Model container be structured?
-- What query capabilities should it provide?
-- How should it handle namespaces?
-- What indexing or caching mechanisms should be implemented?
-
-### TODO: Immutability vs. Mutability
-
-- Should the model be immutable after construction?
-- If mutable, how do we ensure consistency?
-
 ### TODO: Serialization
 
 - How should we handle serialization/deserialization of the model?
@@ -740,6 +914,10 @@ The Smithy Rust parser will convert Smithy IDL and JSON AST files into model obj
 
 - How should we store metadata about the model (version, source files, etc.)?
 - Should metadata be part of the model or separate?
+
+### TODO: Errors
+
+- How should errors be represented?
 
 ### TODO: Validation
 
