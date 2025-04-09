@@ -20,7 +20,7 @@ pub mod shape;
 pub mod traits;
 
 pub mod shape_id;
-mod node;
+pub mod node;
 pub use node::Node;
 
 pub use shape_id::ShapeId;

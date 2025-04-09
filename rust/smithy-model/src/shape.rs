@@ -12,6 +12,8 @@ use std::hash::{Hash, Hasher};
 use crate::shape_id::ShapeId;
 use crate::traits::Trait;
 
+// TODO - define API for shape builder(s)
+
 /// A Smithy shape.
 ///
 /// Shapes are the fundamental building blocks of a Smithy model. Each shape has a unique ID,
@@ -666,7 +668,7 @@ impl Hash for Shape {
 mod tests {
     use super::*;
     use std::collections::HashMap;
-    use crate::traits::Node;
+    use crate::node::Node;
 
     #[test]
     fn test_shape_creation() {
