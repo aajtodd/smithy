@@ -10,7 +10,7 @@ write an equivalent in the Rust programming language.
 
 * This document (which we will refer to as `rust plan` or `planning` for short)
 * The detailed design `rust/docs/planning/detailed-design.md` which contains a more detailed design for sub components
-* Instructions Amazon Q should use when when collaborating on this project or executing any tasks: `rust/docs/planning/workflow.md` 
+* Instructions Amazon Q should use when collaborating on this project or executing any tasks: `rust/docs/planning/workflow.md` 
 * Core specification documents in `/docs/source-2.0/spec/` that define the Smithy language and model:
   * `model.rst` - Core model concepts and definitions
   * `idl.rst` - Smithy IDL syntax and semantics

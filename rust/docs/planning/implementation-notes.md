@@ -2,6 +2,83 @@
 
 This document captures the collaborative process of designing the Smithy Rust implementation with the assistance of AI. These notes can serve as a reference for a future blog post about leveraging AI in software design and implementation.
 
+## Trait Implementation Design (2025-04-09)
+
+We explored several approaches for implementing Smithy traits in Rust and settled on a design that balances type safety, flexibility, and performance.
+
+### Key Design Decisions
+
+1. **Trait-Based Approach with Downcasting**
+   - Defined a `Trait` Rust trait with methods for serialization, deserialization, and type identification
+   - Used Rust's `Any` trait for type-safe downcasting
+   - Implemented a `BoxTrait` type alias for boxed trait objects
+
+2. **Static vs Instance IDs**
+   - Each trait type has a static ID (`static_id()`) that identifies the trait type
+   - Each trait instance can have its own ID (`id()`) that defaults to the static ID
+   - This allows for both type-based lookups and instance-specific IDs when needed
+
+3. **Dynamic Trait Support**
+   - Implemented a `DynamicTrait` type for unknown or dynamically loaded traits
+   - This allows the model to handle traits not known at compile time
+   - Preserves all trait data even for unknown trait types
+
+4. **Trait Registry**
+   - Created a registry for trait creation during deserialization
+   - Uses function pointers for efficient trait creation
+   - Falls back to `DynamicTrait` for unknown traits
+
+5. **Shape Integration**
+   - Shapes store traits in a `HashMap<ShapeId, BoxTrait>`
+   - Provided methods for checking, getting, and adding traits
+   - Implemented both ID-based and type-based access methods
+
+### Alternative Approaches Considered
+
+1. **Enum-Based Approach**
+   - Using an enum to represent all known trait types
+   - Pros: Type safety, pattern matching
+   - Cons: Not extensible for custom traits, large enum as more traits are added
+
+2. **Conversion-Based Approach**
+   - Converting between trait types and `Node` values on demand
+   - Pros: No need for trait objects, potentially more memory efficient
+   - Cons: Conversion cost for each access, less type safety
+
+3. **Type-Erased Approach with Downcasting**
+   - Using `Box<dyn Any>` directly for trait values
+   - Pros: Simple storage, direct downcasting
+   - Cons: No trait-specific interface, more complex error handling
+
+4. **Dual Storage Approach**
+   - Maintaining both generic and specific representations
+   - Pros: No conversion cost, type safety
+   - Cons: Duplicated storage, potential for inconsistency
+
+### Implementation Challenges
+
+1. **Serialization/Deserialization**
+   - Need to map between `ShapeId` values and concrete Rust types
+   - Solution: Trait registry with function pointers for creation
+
+2. **Type Safety vs Flexibility**
+   - Balancing compile-time type safety with runtime flexibility
+   - Solution: Downcasting with `Any` trait and fallback to `DynamicTrait`
+
+3. **Custom Traits**
+   - Supporting user-defined traits not known at compile time
+   - Solution: `DynamicTrait` for unknown traits and extensible registry
+
+### Final Design Benefits
+
+1. **Type Safety**: Full type safety for trait values through downcasting
+2. **Flexibility**: Support for both known and unknown traits
+3. **Performance**: Efficient trait lookup and minimal conversion costs
+4. **Extensibility**: Easy to add new trait types
+5. **Compatibility**: Maintains compatibility with the Smithy specification
+
+The design is documented in detail in `trait-design.md` and will be implemented according to the tasks outlined in `tasks.md`.
+
 ## Core Model Design
 
 ### Trait Implementation Design
