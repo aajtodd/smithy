@@ -16,7 +16,13 @@
 //! This crate provides the core data structures and functionality for working with Smithy models.
 
 pub mod error;
+pub mod shape;
+pub mod traits;
+
 pub mod shape_id;
+mod node;
+pub use node::Node;
+
+pub use shape_id::ShapeId;
 
 pub use error::{Error, Result};
-pub use shape_id::ShapeId;

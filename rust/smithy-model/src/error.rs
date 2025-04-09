@@ -21,6 +21,10 @@ pub enum Error {
     #[error("Shape not found: {0}")]
     ShapeNotFound(String),
 
+    /// Error for shape type mismatch.
+    #[error("Shape type mismatch: expected {1} but got {2} for shape {0}")]
+    ShapeTypeMismatch(String, String, String),
+
     /// Error for loading models.
     #[error("Error loading model: {0}")]
     LoadingError(String),

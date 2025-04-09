@@ -9,44 +9,28 @@
 //! different kinds of traits in a Smithy model.
 
 use crate::shape_id::ShapeId;
-use std::collections::HashMap;
+use crate::Node;
 
 /// A trait in a Smithy model.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Trait {
     /// The ID of the trait.
     pub id: ShapeId,
     /// The value of the trait.
-    pub value: Option<TraitValue>,
+    pub value: Option<Node>,
 }
 
-/// A value for a trait in a Smithy model.
-#[derive(Debug, Clone)]
-pub enum TraitValue {
-    /// A string value.
-    String(String),
-    /// A numeric value.
-    Number(f64),
-    /// A boolean value.
-    Boolean(bool),
-    /// An array of values.
-    Array(Vec<TraitValue>),
-    /// An object with string keys and values.
-    Object(HashMap<String, TraitValue>),
-    /// A null value.
-    Null,
-}
 
 impl Trait {
     /// Creates a new trait with no value.
-    pub fn new(id: ShapeId) -> Self {
-        Self { id, value: None }
+    pub fn new(id: impl Into<ShapeId>) -> Self {
+        Self { id: id.into(), value: None }
     }
 
     /// Creates a new trait with a value.
-    pub fn with_value(id: ShapeId, value: TraitValue) -> Self {
+    pub fn new_with_value(id: impl Into<ShapeId>, value: Node) -> Self {
         Self {
-            id,
+            id: id.into(),
             value: Some(value),
         }
     }
@@ -57,7 +41,8 @@ impl Trait {
     }
 
     /// Returns the value of the trait, if any.
-    pub fn value(&self) -> Option<&TraitValue> {
+    pub fn value(&self) -> Option<&Node> {
         self.value.as_ref()
     }
 }
+

@@ -90,7 +90,9 @@ fn validate_namespace(namespace: &str) -> Result<()> {
 /// and can contain only letters, numbers, and underscores.
 fn validate_identifier(identifier: &str) -> Result<()> {
     if identifier.is_empty() {
-        return Err(Error::InvalidShapeId("Identifier cannot be empty".to_string()));
+        return Err(Error::InvalidShapeId(
+            "Identifier cannot be empty".to_string(),
+        ));
     }
 
     let mut chars = identifier.chars();
