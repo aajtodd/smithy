@@ -7,7 +7,11 @@
 
 use std::collections::HashMap;
 
-use crate::shape::{MemberShape, ProvideShapeMetadata, Shape, ShapeMetadata};
+use crate::shape::{
+    builder::{parse_shape_id, ProvideTraitsMut},
+    error::BuildError,
+    MemberShape, ProvideShapeMetadata, Shape, ShapeMetadata,
+};
 use crate::shape_id::ShapeId;
 use crate::traits::Trait;
 
@@ -71,10 +75,103 @@ pub struct StringShape {
     pub(crate) metadata: ShapeMetadata,
 }
 
+/// Builder for creating a string shape.
+#[derive(Debug, Default)]
+pub struct StringShapeBuilder {
+    id: Option<String>,
+    traits: HashMap<ShapeId, Trait>,
+}
+
+impl StringShapeBuilder {
+    /// Create a new string shape builder.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Set the ID of the string shape.
+    pub fn id(mut self, id: impl Into<String>) -> Self {
+        self.id = Some(id.into());
+        self
+    }
+
+    /// Build the string shape.
+    pub fn build(self) -> Result<StringShape, BuildError> {
+        let id_str = self.id.ok_or_else(|| BuildError::MissingRequiredField {
+            field: "id".to_string(),
+        })?;
+
+        let id = parse_shape_id(&id_str)?;
+
+        // Use the existing constructor
+        Ok(StringShape {
+            metadata: ShapeMetadata::new(id, self.traits),
+        })
+    }
+}
+
+impl ProvideTraitsMut for StringShapeBuilder {
+    fn traits_mut(&mut self) -> &mut HashMap<ShapeId, Trait> {
+        &mut self.traits
+    }
+}
+
+impl StringShape {
+    /// Create a new builder for this shape type.
+    pub fn builder() -> StringShapeBuilder {
+        StringShapeBuilder::new()
+    }
+}
+
 /// A [blob](https://smithy.io/2.0/spec/simple-types.html#blob) shape
 #[derive(Debug, Clone)]
 pub struct BlobShape {
     pub(crate) metadata: ShapeMetadata,
+}
+
+/// Builder for creating a blob shape.
+#[derive(Debug, Default)]
+pub struct BlobShapeBuilder {
+    id: Option<String>,
+    traits: HashMap<ShapeId, Trait>,
+}
+
+impl BlobShapeBuilder {
+    /// Create a new blob shape builder.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Set the ID of the blob shape.
+    pub fn id(mut self, id: impl Into<String>) -> Self {
+        self.id = Some(id.into());
+        self
+    }
+
+    /// Build the blob shape.
+    pub fn build(self) -> Result<BlobShape, BuildError> {
+        let id_str = self.id.ok_or_else(|| BuildError::MissingRequiredField {
+            field: "id".to_string(),
+        })?;
+
+        let id = parse_shape_id(&id_str)?;
+
+        Ok(BlobShape {
+            metadata: ShapeMetadata::new(id, self.traits),
+        })
+    }
+}
+
+impl ProvideTraitsMut for BlobShapeBuilder {
+    fn traits_mut(&mut self) -> &mut HashMap<ShapeId, Trait> {
+        &mut self.traits
+    }
+}
+
+impl BlobShape {
+    /// Create a new builder for this shape type.
+    pub fn builder() -> BlobShapeBuilder {
+        BlobShapeBuilder::new()
+    }
 }
 
 /// A [timestamp](https://smithy.io/2.0/spec/simple-types.html#timestamp) shape

@@ -6,6 +6,7 @@
 //! Shape types for the Smithy model.
 
 mod aggregate;
+mod builder;
 mod error;
 mod service;
 mod simple;
@@ -19,6 +20,7 @@ use crate::shape_id::ShapeId;
 use crate::traits::Trait;
 
 pub use self::aggregate::*;
+pub use self::builder::*;
 pub use self::error::*;
 pub use self::service::*;
 pub use self::simple::*;
