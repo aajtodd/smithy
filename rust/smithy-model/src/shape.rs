@@ -58,6 +58,10 @@ pub enum ShapeKind {
     Timestamp,
     /// A [document](https://smithy.io/2.0/spec/simple-types.html#document) shape
     Document,
+    /// An [enum](https://smithy.io/2.0/spec/simple-types.html#enum) shape
+    Enum(EnumShape),
+    /// An [intEnum](https://smithy.io/2.0/spec/simple-types.html#intenum) shape
+    IntEnum(IntEnumShape),
 
     // Aggregate types
     /// A [list](https://smithy.io/2.0/spec/aggregate-types.html#list) shape
@@ -173,6 +177,40 @@ pub struct ResourceShape {
     pub resources: Vec<ShapeId>,
 }
 
+// FIXME - enum and intEnum shapes may need to retain the original order of members
+
+/// An enum shape.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EnumShape {
+    /// The members of the enum, keyed by member name.
+    pub members: HashMap<String, EnumMember>,
+}
+
+/// An enum member.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EnumMember {
+    /// The name of the enum member.
+    pub name: String,
+    /// The value of the enum member.
+    pub value: String,
+}
+
+/// An integer enum shape.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IntEnumShape {
+    /// The members of the integer enum, keyed by member name.
+    pub members: HashMap<String, IntEnumMember>,
+}
+
+/// An integer enum member.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IntEnumMember {
+    /// The name of the integer enum member.
+    pub name: String,
+    /// The value of the integer enum member.
+    pub value: i64,
+}
+
 /// A view of a list shape that provides access to both common shape fields and list-specific fields.
 pub struct ListShapeView<'a> {
     /// The parent shape.
@@ -211,6 +249,22 @@ pub struct UnionShapeView<'a> {
     pub shape: &'a Shape,
     /// The union-specific fields.
     pub union: &'a UnionShape,
+}
+
+/// A view of an enum shape that provides access to both common shape fields and enum-specific fields.
+pub struct EnumShapeView<'a> {
+    /// The parent shape.
+    pub shape: &'a Shape,
+    /// The enum-specific fields.
+    pub enum_shape: &'a EnumShape,
+}
+
+/// A view of an integer enum shape that provides access to both common shape fields and integer enum-specific fields.
+pub struct IntEnumShapeView<'a> {
+    /// The parent shape.
+    pub shape: &'a Shape,
+    /// The integer enum-specific fields.
+    pub int_enum: &'a IntEnumShape,
 }
 
 /// A view of a service shape that provides access to both common shape fields and service-specific fields.
@@ -319,6 +373,8 @@ impl Shape {
                 | ShapeKind::Blob
                 | ShapeKind::Timestamp
                 | ShapeKind::Document
+                | ShapeKind::Enum(_)
+                | ShapeKind::IntEnum(_)
         )
     }
 
@@ -419,6 +475,16 @@ impl Shape {
         matches!(self.kind, ShapeKind::Document)
     }
 
+    /// Returns true if this is an enum shape.
+    pub fn is_enum(&self) -> bool {
+        matches!(self.kind, ShapeKind::Enum(_))
+    }
+
+    /// Returns true if this is an integer enum shape.
+    pub fn is_int_enum(&self) -> bool {
+        matches!(self.kind, ShapeKind::IntEnum(_))
+    }
+
     /// Returns true if this is a list shape.
     pub fn is_list(&self) -> bool {
         matches!(self.kind, ShapeKind::List(_))
@@ -487,6 +553,28 @@ impl Shape {
     pub fn as_union(&self) -> Option<UnionShapeView<'_>> {
         match &self.kind {
             ShapeKind::Union(union) => Some(UnionShapeView { shape: self, union }),
+            _ => None,
+        }
+    }
+
+    /// Returns this shape as an enum shape view, if it is one.
+    pub fn as_enum(&self) -> Option<EnumShapeView<'_>> {
+        match &self.kind {
+            ShapeKind::Enum(enum_shape) => Some(EnumShapeView { 
+                shape: self, 
+                enum_shape 
+            }),
+            _ => None,
+        }
+    }
+
+    /// Returns this shape as an integer enum shape view, if it is one.
+    pub fn as_int_enum(&self) -> Option<IntEnumShapeView<'_>> {
+        match &self.kind {
+            ShapeKind::IntEnum(int_enum) => Some(IntEnumShapeView { 
+                shape: self, 
+                int_enum 
+            }),
             _ => None,
         }
     }
@@ -642,6 +730,30 @@ impl Shape {
     pub fn expect_member(&self) -> MemberShapeView<'_> {
         self.as_member().expect(&format!(
             "Expected shape {} to be a Member, but got {:?}",
+            self.id, self.kind
+        ))
+    }
+
+    /// Returns this shape as an enum shape view, or panics if it's not one.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the shape is not an enum shape.
+    pub fn expect_enum(&self) -> EnumShapeView<'_> {
+        self.as_enum().expect(&format!(
+            "Expected shape {} to be an Enum, but got {:?}",
+            self.id, self.kind
+        ))
+    }
+
+    /// Returns this shape as an integer enum shape view, or panics if it's not one.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the shape is not an integer enum shape.
+    pub fn expect_int_enum(&self) -> IntEnumShapeView<'_> {
+        self.as_int_enum().expect(&format!(
+            "Expected shape {} to be an IntEnum, but got {:?}",
             self.id, self.kind
         ))
     }
@@ -802,5 +914,59 @@ mod tests {
         // Test expect_structure
         let struct_view = shape.expect_structure();
         assert_eq!(struct_view.structure.members.len(), 2);
+    }
+
+    #[test]
+    fn test_enum_shape() {
+        let enum_id = ShapeId::new("com.example", "MyEnum").unwrap();
+        
+        let mut members = HashMap::new();
+        members.insert("RED".to_string(), EnumMember {
+            name: "RED".to_string(), 
+            value: "red".to_string() 
+        });
+        members.insert("GREEN".to_string(), EnumMember { 
+            name: "GREEN".to_string(), 
+            value: "green".to_string() 
+        });
+        
+        let enum_shape = EnumShape { members };
+        let shape = Shape::new(enum_id, ShapeKind::Enum(enum_shape));
+        
+        assert!(shape.is_enum());
+        assert!(shape.is_simple());
+        assert!(!shape.is_aggregate());
+        
+        let enum_view = shape.as_enum().unwrap();
+        assert_eq!(enum_view.enum_shape.members.len(), 2);
+        assert!(enum_view.enum_shape.members.contains_key("RED"));
+        assert_eq!(enum_view.enum_shape.members["RED"].value, "red");
+    }
+    
+    #[test]
+    fn test_int_enum_shape() {
+        let enum_id = ShapeId::new("com.example", "MyIntEnum").unwrap();
+        
+        let mut members = HashMap::new();
+        members.insert("ONE".to_string(), IntEnumMember { 
+            name: "ONE".to_string(), 
+            value: 1 
+        });
+        members.insert("TWO".to_string(), IntEnumMember { 
+            name: "TWO".to_string(), 
+            value: 2 
+        });
+        
+        let int_enum_shape = IntEnumShape { members };
+        let shape = Shape::new(enum_id, ShapeKind::IntEnum(int_enum_shape));
+        
+        assert!(shape.is_int_enum());
+        assert!(shape.is_simple());
+        assert!(!shape.is_aggregate());
+        
+        let int_enum_view = shape.as_int_enum().unwrap();
+        assert_eq!(int_enum_view.int_enum.members.len(), 2);
+        assert!(int_enum_view.int_enum.members.contains_key("ONE"));
+        assert_eq!(int_enum_view.int_enum.members["ONE"].value, 1);
     }
 }
