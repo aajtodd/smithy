@@ -231,6 +231,215 @@ impl ProvideShapeMetadata for MemberShape {
 }
 ```
 
+### Builder Pattern for Smithy Shapes
+
+To provide an ergonomic API for programmatically creating shapes, we implement a builder pattern:
+
+#### Core Builder Design
+
+```rust
+/// Error that can occur when building a shape
+#[derive(Debug, thiserror::Error)]
+pub enum BuildError {
+    /// A required field is missing
+    #[error("Missing required field: {0}")]
+    MissingField(String),
+    
+    /// The shape ID is invalid
+    #[error("Invalid shape ID: {0}")]
+    InvalidId(String),
+    
+    /// Other error
+    #[error("{0}")]
+    Other(String),
+}
+
+/// Internal trait for accessing the traits container
+trait ProvideTraitsMut {
+    /// Get mutable access to the traits container
+    fn traits_mut(&mut self) -> &mut HashMap<ShapeId, Trait>;
+}
+
+/// Extension trait for shape builders with common trait methods
+trait ShapeBuilderExt: ProvideTraitsMut + Sized {
+    /// Add documentation to the shape
+    fn documentation(mut self, doc: impl Into<String>) -> Self {
+        let doc_string = doc.into();
+        let trait_id = ShapeId::new("smithy.api", "documentation").unwrap();
+        let strait = Trait::new_with_value(trait_id, Node::String(doc_string));
+        self.traits_mut().insert(strait.id().clone(), strait);
+        self
+    }
+    
+    /// Mark the shape as required
+    fn required(mut self) -> Self {
+        let trait_id = ShapeId::new("smithy.api", "required").unwrap();
+        let strait = Trait::new_with_value(trait_id, Node::Bool(true));
+        self.traits_mut().insert(strait.id().clone(), strait);
+        self
+    }
+    
+    /// Add a Smithy trait to the shape
+    fn with_trait(mut self, strait: impl Into<Trait>) -> Self {
+        let strait = strait.into();
+        self.traits_mut().insert(strait.id().clone(), strait);
+        self
+    }
+}
+
+// Implement ShapeBuilderExt for all types that implement ProvideTraitsMut
+impl<T: ProvideTraitsMut> ShapeBuilderExt for T {}
+```
+
+#### Shape Builders
+
+Each shape type has its own builder that implements the `ProvideTraitsMut` trait:
+
+```rust
+/// Builder for creating a structure shape
+pub struct StructureShapeBuilder {
+    id: Option<String>,
+    traits: HashMap<ShapeId, Trait>,
+    members: HashMap<String, MemberShape>,
+}
+
+impl StructureShapeBuilder {
+    /// Create a new structure shape builder
+    pub fn new() -> Self {
+        Self {
+            id: None,
+            traits: HashMap::new(),
+            members: HashMap::new(),
+        }
+    }
+    
+    /// Set the ID of the structure shape
+    pub fn id(mut self, id: impl Into<String>) -> Self {
+        self.id = Some(id.into());
+        self
+    }
+    
+    /// Add a member to the structure shape
+    pub fn member(mut self, name: impl Into<String>, member: impl Into<MemberShape>) -> Self {
+        self.members.insert(name.into(), member.into());
+        self
+    }
+    
+    /// Build the structure shape
+    pub fn build(self) -> Result<StructureShape, BuildError> {
+        let id_str = self.id.ok_or(BuildError::MissingField("id".to_string()))?;
+        let id = ShapeId::from_str(&id_str)
+            .map_err(|e| BuildError::InvalidId(format!("{}: {}", id_str, e)))?;
+        
+        Ok(StructureShape::new(id, self.traits, self.members))
+    }
+}
+
+impl ProvideTraitsMut for StructureShapeBuilder {
+    fn traits_mut(&mut self) -> &mut HashMap<ShapeId, Trait> {
+        &mut self.traits
+    }
+}
+
+impl StructureShape {
+    /// Create a new builder for this shape type
+    pub fn builder() -> StructureShapeBuilder {
+        StructureShapeBuilder::new()
+    }
+}
+```
+
+#### Specialized Builders
+
+Some shape types have specialized builder methods:
+
+```rust
+/// Builder for creating an enum shape
+pub struct EnumShapeBuilder {
+    id: Option<String>,
+    traits: HashMap<ShapeId, Trait>,
+    members: HashMap<String, MemberShape>,
+}
+
+impl EnumShapeBuilder {
+    // ... standard builder methods ...
+    
+    /// Add an enum value
+    pub fn value(self, name: impl Into<String>, value: impl Into<String>) -> Result<Self, BuildError> {
+        let name_str = name.into();
+        let value_str = value.into();
+        
+        // Create a member shape for the enum value
+        let member_id = format!("{}${}", self.id.as_ref().ok_or(BuildError::MissingField("id".to_string()))?, name_str);
+        
+        // Create the enumValue trait
+        let trait_id = ShapeId::new("smithy.api", "enumValue").unwrap();
+        let strait = Trait::new_with_value(trait_id, Node::String(value_str));
+        
+        let member = MemberShape::builder()
+            .id(member_id)
+            .name(name_str.clone())
+            .target("smithy.api#String")
+            .with_trait(strait)
+            .build()?;
+        
+        Ok(self.member(name_str, member))
+    }
+}
+```
+
+#### Example Usage
+
+```rust
+// Using builders to create shapes
+let result = StructureShape::builder()
+    .id("example#Person")
+    .documentation("A person structure")
+    .member(
+        "name",
+        MemberShape::builder()
+            .id("example#Person$name")
+            .name("name")
+            .target("smithy.api#String")
+            .required()
+            .documentation("The person's name")
+            .build()?
+    )
+    .member(
+        "age",
+        MemberShape::builder()
+            .id("example#Person$age")
+            .name("age")
+            .target("smithy.api#Integer")
+            .documentation("The person's age")
+            .build()?
+    )
+    .build()?;
+
+// Create an enum shape with the improved API
+let color_enum = EnumShape::builder()
+    .id("example#Color")
+    .documentation("A color enumeration")
+    .value("RED", "red")?  // Convenience method for enum values
+    .value("GREEN", "green")?
+    .value("BLUE", "blue")?
+    .build()?;
+
+// Convert to Shape
+let shape: Shape = result.into();
+```
+
+#### Benefits of the Builder Pattern
+
+1. **Fluent Interface**: The builder methods return `self`, allowing for method chaining.
+2. **Default Values**: Builders can initialize fields with sensible defaults.
+3. **Validation**: The `build()` method validates all required fields and returns a `Result`.
+4. **Type Safety**: The builder ensures that all required fields are set before building the shape.
+5. **Readability**: The builder pattern makes shape creation more readable and self-documenting.
+6. **Extensibility**: New builder methods can be added without breaking existing code.
+7. **Trait Sharing**: Common trait methods are shared via the `ShapeBuilderExt` trait.
+8. **String-Based IDs**: The builders accept string IDs and handle conversion to `ShapeId` during the build phase.
+
 ## Design Rationale
 
 ### Why an Enum-Based Approach?
