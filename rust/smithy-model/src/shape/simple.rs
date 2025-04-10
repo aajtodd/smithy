@@ -21,6 +21,52 @@ pub struct BooleanShape {
     pub(crate) metadata: ShapeMetadata,
 }
 
+/// Builder for creating a boolean shape.
+#[derive(Debug, Default)]
+pub struct BooleanShapeBuilder {
+    id: Option<String>,
+    traits: HashMap<ShapeId, Trait>,
+}
+
+impl BooleanShapeBuilder {
+    /// Create a new boolean shape builder.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Set the ID of the boolean shape.
+    pub fn id(mut self, id: impl Into<String>) -> Self {
+        self.id = Some(id.into());
+        self
+    }
+
+    /// Build the boolean shape.
+    pub fn build(self) -> Result<BooleanShape, BuildError> {
+        let id_str = self.id.ok_or_else(|| BuildError::MissingRequiredField {
+            field: "id".to_string(),
+        })?;
+
+        let id = parse_shape_id(&id_str)?;
+
+        Ok(BooleanShape {
+            metadata: ShapeMetadata::new(id, self.traits),
+        })
+    }
+}
+
+impl ProvideTraitsMut for BooleanShapeBuilder {
+    fn traits_mut(&mut self) -> &mut HashMap<ShapeId, Trait> {
+        &mut self.traits
+    }
+}
+
+impl BooleanShape {
+    /// Create a new builder for this shape type.
+    pub fn builder() -> BooleanShapeBuilder {
+        BooleanShapeBuilder::new()
+    }
+}
+
 /// A [byte](https://smithy.io/2.0/spec/simple-types.html#byte) shape
 #[derive(Debug, Clone)]
 pub struct ByteShape {
@@ -37,6 +83,52 @@ pub struct ShortShape {
 #[derive(Debug, Clone)]
 pub struct IntegerShape {
     pub(crate) metadata: ShapeMetadata,
+}
+
+/// Builder for creating an integer shape.
+#[derive(Debug, Default)]
+pub struct IntegerShapeBuilder {
+    id: Option<String>,
+    traits: HashMap<ShapeId, Trait>,
+}
+
+impl IntegerShapeBuilder {
+    /// Create a new integer shape builder.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Set the ID of the integer shape.
+    pub fn id(mut self, id: impl Into<String>) -> Self {
+        self.id = Some(id.into());
+        self
+    }
+
+    /// Build the integer shape.
+    pub fn build(self) -> Result<IntegerShape, BuildError> {
+        let id_str = self.id.ok_or_else(|| BuildError::MissingRequiredField {
+            field: "id".to_string(),
+        })?;
+
+        let id = parse_shape_id(&id_str)?;
+
+        Ok(IntegerShape {
+            metadata: ShapeMetadata::new(id, self.traits),
+        })
+    }
+}
+
+impl ProvideTraitsMut for IntegerShapeBuilder {
+    fn traits_mut(&mut self) -> &mut HashMap<ShapeId, Trait> {
+        &mut self.traits
+    }
+}
+
+impl IntegerShape {
+    /// Create a new builder for this shape type.
+    pub fn builder() -> IntegerShapeBuilder {
+        IntegerShapeBuilder::new()
+    }
 }
 
 /// A [long](https://smithy.io/2.0/spec/simple-types.html#long) shape
@@ -178,6 +270,52 @@ impl BlobShape {
 #[derive(Debug, Clone)]
 pub struct TimestampShape {
     pub(crate) metadata: ShapeMetadata,
+}
+
+/// Builder for creating a timestamp shape.
+#[derive(Debug, Default)]
+pub struct TimestampShapeBuilder {
+    id: Option<String>,
+    traits: HashMap<ShapeId, Trait>,
+}
+
+impl TimestampShapeBuilder {
+    /// Create a new timestamp shape builder.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Set the ID of the timestamp shape.
+    pub fn id(mut self, id: impl Into<String>) -> Self {
+        self.id = Some(id.into());
+        self
+    }
+
+    /// Build the timestamp shape.
+    pub fn build(self) -> Result<TimestampShape, BuildError> {
+        let id_str = self.id.ok_or_else(|| BuildError::MissingRequiredField {
+            field: "id".to_string(),
+        })?;
+
+        let id = parse_shape_id(&id_str)?;
+
+        Ok(TimestampShape {
+            metadata: ShapeMetadata::new(id, self.traits),
+        })
+    }
+}
+
+impl ProvideTraitsMut for TimestampShapeBuilder {
+    fn traits_mut(&mut self) -> &mut HashMap<ShapeId, Trait> {
+        &mut self.traits
+    }
+}
+
+impl TimestampShape {
+    /// Create a new builder for this shape type.
+    pub fn builder() -> TimestampShapeBuilder {
+        TimestampShapeBuilder::new()
+    }
 }
 
 /// A [document](https://smithy.io/2.0/spec/simple-types.html#document) shape
