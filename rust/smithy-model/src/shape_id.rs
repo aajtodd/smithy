@@ -354,6 +354,12 @@ impl TryFrom<String> for ShapeId {
     }
 }
 
+impl AsRef<ShapeId> for ShapeId {
+    fn as_ref(&self) -> &ShapeId {
+        self
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

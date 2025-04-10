@@ -393,7 +393,7 @@ impl Node {
 /// Representation of a numeric node value
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Number {
-    inner: Inner
+    inner: Inner,
 }
 
 impl fmt::Debug for Number {
@@ -553,7 +553,7 @@ impl PartialEq for Inner {
     }
 }
 
-impl Eq for Inner { }
+impl Eq for Inner {}
 
 impl Hash for Inner {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
@@ -586,61 +586,97 @@ impl fmt::Display for Number {
 }
 impl From<i8> for Number {
     fn from(n: i8) -> Self {
-        Number { inner: if n < 0 { Inner::NegInt(n as i64) } else { Inner::PosInt(n as u64) } }
+        Number {
+            inner: if n < 0 {
+                Inner::NegInt(n as i64)
+            } else {
+                Inner::PosInt(n as u64)
+            },
+        }
     }
 }
 
 impl From<i16> for Number {
     fn from(n: i16) -> Self {
-        Number { inner: if n < 0 { Inner::NegInt(n as i64) } else { Inner::PosInt(n as u64) } }
+        Number {
+            inner: if n < 0 {
+                Inner::NegInt(n as i64)
+            } else {
+                Inner::PosInt(n as u64)
+            },
+        }
     }
 }
 
 impl From<i32> for Number {
     fn from(n: i32) -> Self {
-        Number { inner: if n < 0 { Inner::NegInt(n as i64) } else { Inner::PosInt(n as u64) } }
+        Number {
+            inner: if n < 0 {
+                Inner::NegInt(n as i64)
+            } else {
+                Inner::PosInt(n as u64)
+            },
+        }
     }
 }
 
 impl From<i64> for Number {
     fn from(n: i64) -> Self {
-        Number { inner: if n < 0 { Inner::NegInt(n) } else { Inner::PosInt(n as u64) } }
+        Number {
+            inner: if n < 0 {
+                Inner::NegInt(n)
+            } else {
+                Inner::PosInt(n as u64)
+            },
+        }
     }
 }
 
 impl From<u8> for Number {
     fn from(n: u8) -> Self {
-        Number { inner: Inner::PosInt(n as u64) }
+        Number {
+            inner: Inner::PosInt(n as u64),
+        }
     }
 }
 
 impl From<u16> for Number {
     fn from(n: u16) -> Self {
-        Number { inner: Inner::PosInt(n as u64) }
+        Number {
+            inner: Inner::PosInt(n as u64),
+        }
     }
 }
 
 impl From<u32> for Number {
     fn from(n: u32) -> Self {
-        Number { inner: Inner::PosInt(n as u64) }
+        Number {
+            inner: Inner::PosInt(n as u64),
+        }
     }
 }
 
 impl From<u64> for Number {
     fn from(n: u64) -> Self {
-        Number { inner: Inner::PosInt(n) }
+        Number {
+            inner: Inner::PosInt(n),
+        }
     }
 }
 
 impl From<f32> for Number {
     fn from(n: f32) -> Self {
-        Number { inner: Inner::Float(n as f64) }
+        Number {
+            inner: Inner::Float(n as f64),
+        }
     }
 }
 
 impl From<f64> for Number {
     fn from(n: f64) -> Self {
-        Number { inner: Inner::Float(n) }
+        Number {
+            inner: Inner::Float(n),
+        }
     }
 }
 

@@ -20,11 +20,13 @@ pub struct Trait {
     pub value: Option<Node>,
 }
 
-
 impl Trait {
     /// Creates a new trait with no value.
     pub fn new(id: impl Into<ShapeId>) -> Self {
-        Self { id: id.into(), value: None }
+        Self {
+            id: id.into(),
+            value: None,
+        }
     }
 
     /// Creates a new trait with a value.
@@ -45,4 +47,3 @@ impl Trait {
         self.value.as_ref()
     }
 }
-
