@@ -8,6 +8,7 @@
 mod aggregate;
 mod service;
 mod simple;
+mod type_checks;
 
 use std::collections::HashMap;
 use std::fmt;
