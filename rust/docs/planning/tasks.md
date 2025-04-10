@@ -1,163 +1,280 @@
-# Implementation Tasks
+# Smithy Shape Implementation Tasks
 
-## Current Focus: Trait Implementation
+This document outlines the tasks required to implement our updated shape design as described in `shape-design.md`.
 
-Reference the design in [trait design](trait-design.md)
+## Overview
 
-### Task 1: Core Trait Interface
+We need to refactor the current shape implementation to move from a design where shape ID and traits are stored in the parent `Shape` struct to a design where each shape variant stores its own metadata. We'll also implement a builder pattern for creating shapes.
 
-- [ ] Define the `Trait` trait in `traits.rs`
-  - [ ] Add `static_id()` method for trait type identification
-  - [ ] Add `id()` method with default implementation
-  - [ ] Add `to_node()` method for serialization
-  - [ ] Add `from_node()` method for deserialization
-  - [ ] Add `from_node_boxed()` helper method
-  - [ ] Add `clone_trait()` method for cloning trait objects
-  - [ ] Add `as_any()` method for downcasting
-- [ ] Implement the `BoxTrait` type alias
-- [ ] Add comprehensive documentation for the trait methods
-- [ ] Create unit tests for the trait interface
+## Current Implementation
 
-### Task 2: Basic Trait Implementations
+The current implementation in `shape.rs` uses:
+- A `Shape` struct with `id`, `traits`, and `kind` fields
+- A `ShapeKind` enum for different shape types
+- Shape-specific data stored in the enum variants
+- Helper methods on `Shape` for accessing shape-specific data
 
-- [ ] Implement `Documentation` trait
-  - [ ] Define the struct and implement `Trait`
-  - [ ] Implement serialization to `Node`
-  - [ ] Implement deserialization from `Node`
-  - [ ] Write unit tests for serialization/deserialization
-  - [ ] Add documentation
-- [ ] Implement `Required` trait
-  - [ ] Define the struct and implement `Trait`
-  - [ ] Implement serialization to `Node`
-  - [ ] Implement deserialization from `Node`
-  - [ ] Write unit tests for serialization/deserialization
-  - [ ] Add documentation
-- [ ] Implement `Deprecated` trait
-  - [ ] Define the struct and implement `Trait`
-  - [ ] Implement serialization to `Node`
-  - [ ] Implement deserialization from `Node`
-  - [ ] Write unit tests for serialization/deserialization
-  - [ ] Add documentation
-- [ ] Implement `DynamicTrait` for unknown traits
-  - [ ] Define the struct with ID and value fields
-  - [ ] Implement `Trait` with custom `id()` method
-  - [ ] Add constructor and accessor methods
-  - [ ] Write unit tests
-  - [ ] Add documentation
+## Target Implementation
 
-### Task 3: Trait Registry
+Our target implementation will:
+- Use a `Shape` enum with variants for each shape type
+- Store shape ID and traits in each shape variant via a `ShapeMetadata` struct
+- Provide common functionality through traits (`HasShapeId`, `HasTraits`)
+- Use a private `ProvideShapeMetadata` trait with blanket implementations
+- Implement a builder pattern for creating shapes
 
-- [ ] Implement the `TraitRegistry` struct
-  - [ ] Define the struct with creators map
-  - [ ] Implement constructor with built-in traits
-- [ ] Add methods for registering trait types
-  - [ ] Implement `register<T: Trait + 'static>()` method
-  - [ ] Add registration of built-in traits
-- [ ] Implement trait creation from ID and Node
-  - [ ] Add `create_trait()` method
-  - [ ] Handle fallback to `DynamicTrait`
-  - [ ] Add `is_registered()` helper method
-- [ ] Write unit tests for the registry
-  - [ ] Test registration of traits
-  - [ ] Test creation of known traits
-  - [ ] Test fallback to dynamic traits
-  - [ ] Test error handling
+## Tasks
 
-### Task 4: Shape Integration
+### Task SHAPE-001: Define Core Traits and Metadata
 
-- [ ] Update the `Shape` struct to store traits
-  - [ ] Add `traits` field to `Shape`
-  - [ ] Update constructors to initialize empty traits map
-  - [ ] Update clone and debug implementations
-- [ ] Add methods for checking traits
-  - [ ] Implement `has_trait()` for ID-based checks
-  - [ ] Implement `has_trait_type()` for type-based checks
-- [ ] Add methods for getting traits
-  - [ ] Implement `get_trait_by_id()` for ID-based access
-  - [ ] Implement `get_trait()` for type-safe access
-  - [ ] Implement `expect_trait()` for panicking access
-- [ ] Add methods for adding traits
-  - [ ] Implement `with_trait()` builder method
-  - [ ] Update any existing methods that work with traits
-- [ ] Write unit tests for trait integration
-  - [ ] Test adding traits to shapes
-  - [ ] Test retrieving traits by ID
-  - [ ] Test retrieving traits by type
-  - [ ] Test error handling and edge cases
+**Description**: Define the core traits and metadata structure for the new shape design.
 
-### Task 5: Serialization/Deserialization
+**Steps**:
+1. Define the `HasShapeId` trait
+2. Define the `HasTraits` trait with default implementations
+3. Define the private `ProvideShapeMetadata` trait
+4. Implement the `ShapeMetadata` struct
+5. Create blanket implementations of `HasShapeId` and `HasTraits` for types that implement `ProvideShapeMetadata`
 
-- [ ] Update model loading to handle traits
-  - [ ] Modify `parse_shape()` to extract traits from JSON
-  - [ ] Use the trait registry to create traits
-  - [ ] Handle trait serialization during model saving
-- [ ] Implement JSON AST serialization
-  - [ ] Add trait serialization to shape serialization
-  - [ ] Format trait IDs with $ prefix in JSON
-- [ ] Implement JSON AST deserialization
-  - [ ] Parse trait fields (prefixed with $) from JSON
-  - [ ] Create appropriate trait objects
-- [ ] Write unit tests for serialization/deserialization
-  - [ ] Test serialization of shapes with traits
-  - [ ] Test deserialization of shapes with traits
-  - [ ] Test round-trip serialization/deserialization
-  - [ ] Test handling of unknown traits
+**Acceptance Criteria**:
+- All traits and structs are properly defined
+- Blanket implementations work correctly
+- Documentation is complete
 
-### Task 6: Additional Trait Implementations
+### Task SHAPE-002: Implement Shape Enum and Basic Variants
 
-- [ ] Implement common Smithy traits
-  - [ ] `Sensitive` trait
-  - [ ] `Pattern` trait
-  - [ ] `Length` trait
-  - [ ] `Range` trait
-  - [ ] `Title` trait
-  - [ ] `Trait` trait (meta-trait)
-- [ ] Write unit tests for each trait
-  - [ ] Test serialization/deserialization
-  - [ ] Test validation logic if applicable
-- [ ] Update trait registry to include all implemented traits
+**Description**: Refactor the `Shape` from a struct to an enum and implement basic shape variants.
 
-### Task 7: Documentation and Examples
+**Steps**:
+1. Define the `Shape` enum with variants for all shape types
+2. Implement `ProvideShapeMetadata` for `Shape` by delegating to variants
+3. Implement basic shape structs (Boolean, String, etc.) with `ShapeMetadata`
+4. Implement `ProvideShapeMetadata` for each shape struct
+5. Implement `From` traits for converting shape structs to `Shape` enum
 
-- [ ] Document the trait system
-  - [ ] Add detailed comments to all types and methods
-  - [ ] Update the design document with final implementation details
-- [ ] Add examples for common use cases
-  - [ ] Example for creating and using traits
-  - [ ] Example for working with dynamic traits
-  - [ ] Example for implementing custom traits
-- [ ] Create a guide for implementing custom traits
-  - [ ] Step-by-step instructions
-  - [ ] Best practices
-  - [ ] Common pitfalls to avoid
+**Acceptance Criteria**:
+- `Shape` is properly defined as an enum
+- Basic shape variants are implemented
+- All shapes implement `ProvideShapeMetadata`
+- `From` traits work correctly
 
-## Implementation Strategy
+### Task SHAPE-003: Implement Aggregate Shape Types
 
-We will implement the trait system in the following order:
+**Description**: Implement aggregate shape types (Structure, Union, List, Map, Set).
 
-1. Start with the core interfaces (`Trait`, `BoxTrait`)
-2. Implement a few basic traits (`Documentation`, `Required`)
-3. Add the `DynamicTrait` implementation
-4. Implement the `TraitRegistry`
-5. Update the `Shape` struct to work with traits
-6. Implement serialization/deserialization
-7. Add more trait implementations
-8. Add tests and documentation
+**Steps**:
+1. Define the `StructureShape`, `UnionShape`, `ListShape`, `MapShape`, and `SetShape` structs
+2. Update these structs to store `MemberShape` directly instead of `ShapeId`
+3. Implement `ProvideShapeMetadata` for each shape
+4. Implement constructors and accessors for each shape
+5. Implement `From` traits for converting to `Shape` enum
 
-This approach allows us to build and test incrementally, ensuring each component works before moving on to the next.
+**Acceptance Criteria**:
+- All aggregate shapes are properly implemented
+- Member shapes are stored directly in aggregate shapes
+- All shapes implement `ProvideShapeMetadata`
+- `From` traits work correctly
 
-## Testing Strategy
+### Task SHAPE-004: Implement Service Shape Types
 
-- **Unit Tests**: Each component will have comprehensive unit tests
-- **Integration Tests**: Test the interaction between components
-- **Property Tests**: Use property-based testing for serialization/deserialization
-- **Example Tests**: Create example-based tests for common use cases
-- **Edge Cases**: Test error handling and edge cases
+**Description**: Implement service shape types (Service, Operation, Resource).
 
-## Next Steps
+**Steps**:
+1. Define the `ServiceShape`, `OperationShape`, and `ResourceShape` structs
+2. Implement `ProvideShapeMetadata` for each shape
+3. Implement constructors and accessors for each shape
+4. Implement `From` traits for converting to `Shape` enum
 
-After completing the trait implementation, we will move on to:
+**Acceptance Criteria**:
+- All service shapes are properly implemented
+- All shapes implement `ProvideShapeMetadata`
+- `From` traits work correctly
 
-1. Model validation
-2. Selector implementation
-3. Code generation framework
+### Task SHAPE-005: Implement Enum and IntEnum Shapes
+
+**Description**: Implement enum and integer enum shape types.
+
+**Steps**:
+1. Define the `EnumShape` and `IntEnumShape` structs
+2. Update these structs to store `MemberShape` directly
+3. Implement `ProvideShapeMetadata` for each shape
+4. Implement constructors and accessors for each shape
+5. Implement `From` traits for converting to `Shape` enum
+
+**Acceptance Criteria**:
+- Enum shapes are properly implemented
+- Member shapes are stored directly in enum shapes
+- All shapes implement `ProvideShapeMetadata`
+- `From` traits work correctly
+
+### Task SHAPE-006: Implement Shape Type Checking and Conversion Methods
+
+**Description**: Implement methods for checking shape types and converting between them.
+
+**Steps**:
+1. Implement type checking methods (`is_structure`, `is_list`, etc.)
+2. Implement type conversion methods (`as_structure`, `as_list`, etc.)
+3. Implement expect methods (`expect_structure`, `expect_list`, etc.)
+
+**Acceptance Criteria**:
+- All type checking methods work correctly
+- All type conversion methods work correctly
+- All expect methods work correctly and provide good error messages
+
+### Task SHAPE-007: Define Builder Error Type
+
+**Description**: Define the error type for shape builders.
+
+**Steps**:
+1. Define the `BuildError` enum with variants for different error types
+2. Implement `std::error::Error` and `std::fmt::Display` for `BuildError`
+3. Implement conversion from other error types to `BuildError`
+
+**Acceptance Criteria**:
+- `BuildError` is properly defined
+- Error messages are clear and helpful
+- Conversion from other error types works correctly
+
+### Task SHAPE-008: Implement Builder Traits
+
+**Description**: Implement the traits needed for the builder pattern.
+
+**Steps**:
+1. Define the `ProvideTraitsMut` trait
+2. Define the `ShapeBuilderExt` trait with common trait methods
+3. Implement blanket implementation of `ShapeBuilderExt` for types that implement `ProvideTraitsMut`
+
+**Acceptance Criteria**:
+- All traits are properly defined
+- Common trait methods work correctly
+- Blanket implementation works correctly
+
+### Task SHAPE-009: Implement Basic Shape Builders
+
+**Description**: Implement builders for basic shape types.
+
+**Steps**:
+1. Implement builders for simple shapes (Boolean, String, etc.)
+2. Implement `ProvideTraitsMut` for each builder
+3. Implement builder methods for each shape
+4. Implement `build` methods that return `Result<Shape, BuildError>`
+
+**Acceptance Criteria**:
+- All basic shape builders are properly implemented
+- All builders implement `ProvideTraitsMut`
+- Builder methods work correctly
+- `build` methods validate inputs and return appropriate errors
+
+### Task SHAPE-010: Implement Aggregate Shape Builders
+
+**Description**: Implement builders for aggregate shape types.
+
+**Steps**:
+1. Implement builders for aggregate shapes (Structure, Union, List, Map, Set)
+2. Implement `ProvideTraitsMut` for each builder
+3. Implement builder methods for each shape
+4. Implement `build` methods that return `Result<Shape, BuildError>`
+
+**Acceptance Criteria**:
+- All aggregate shape builders are properly implemented
+- All builders implement `ProvideTraitsMut`
+- Builder methods work correctly
+- `build` methods validate inputs and return appropriate errors
+
+### Task SHAPE-011: Implement Service Shape Builders
+
+**Description**: Implement builders for service shape types.
+
+**Steps**:
+1. Implement builders for service shapes (Service, Operation, Resource)
+2. Implement `ProvideTraitsMut` for each builder
+3. Implement builder methods for each shape
+4. Implement `build` methods that return `Result<Shape, BuildError>`
+
+**Acceptance Criteria**:
+- All service shape builders are properly implemented
+- All builders implement `ProvideTraitsMut`
+- Builder methods work correctly
+- `build` methods validate inputs and return appropriate errors
+
+### Task SHAPE-012: Implement Enum Shape Builders
+
+**Description**: Implement builders for enum and integer enum shape types.
+
+**Steps**:
+1. Implement builders for enum shapes (Enum, IntEnum)
+2. Implement `ProvideTraitsMut` for each builder
+3. Implement builder methods for each shape
+4. Implement specialized methods like `value` for enum builders
+5. Implement `build` methods that return `Result<Shape, BuildError>`
+
+**Acceptance Criteria**:
+- All enum shape builders are properly implemented
+- All builders implement `ProvideTraitsMut`
+- Builder methods work correctly
+- Specialized methods work correctly
+- `build` methods validate inputs and return appropriate errors
+
+### Task SHAPE-013: Update Tests
+
+**Description**: Update existing tests and add new tests for the new shape design.
+
+**Steps**:
+1. Update existing tests to work with the new shape design
+2. Add tests for new functionality (traits, builders, etc.)
+3. Add tests for error cases
+4. Ensure all tests pass
+
+**Acceptance Criteria**:
+- All tests pass
+- Test coverage is comprehensive
+- Edge cases are tested
+
+### Task SHAPE-014: Update Documentation
+
+**Description**: Update documentation to reflect the new shape design.
+
+**Steps**:
+1. Update documentation comments in code
+2. Update examples in documentation
+3. Update design documentation
+
+**Acceptance Criteria**:
+- Documentation is complete and accurate
+- Examples are up-to-date
+- Design documentation reflects the implemented design
+
+## Implementation Plan
+
+1. Start with core traits and metadata (SHAPE-001)
+2. Implement the Shape enum and basic variants (SHAPE-002)
+3. Implement aggregate shapes (SHAPE-003)
+4. Implement service shapes (SHAPE-004)
+5. Implement enum shapes (SHAPE-005)
+6. Implement type checking and conversion methods (SHAPE-006)
+7. Implement the builder pattern (SHAPE-007 through SHAPE-012)
+8. Update tests and documentation (SHAPE-013, SHAPE-014)
+
+## Dependencies
+
+- The `ShapeId` type must be fully implemented
+- The `Trait` type must be fully implemented
+
+## Risks and Mitigations
+
+**Risk**: Breaking changes to the API
+**Mitigation**: Implement the new design in a separate branch and thoroughly test before merging
+
+**Risk**: Performance regression
+**Mitigation**: Benchmark the new implementation against the old one
+
+**Risk**: Increased complexity
+**Mitigation**: Ensure good documentation and examples
+
+## Timeline
+
+Estimated time for completion: 2-3 weeks
+
+- Week 1: Tasks SHAPE-001 through SHAPE-006
+- Week 2: Tasks SHAPE-007 through SHAPE-012
+- Week 3: Tasks SHAPE-013 and SHAPE-014, testing and refinement
