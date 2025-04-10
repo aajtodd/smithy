@@ -7,9 +7,10 @@
 
 use std::collections::HashMap;
 
-use crate::shape::{ProvideShapeMetadata, Shape, ShapeMetadata};
 use crate::shape_id::ShapeId;
 use crate::traits::Trait;
+use crate::shape::{Shape, ShapeMetadata, ProvideShapeMetadata, MemberShape};
+
 
 /// A [boolean](https://smithy.io/2.0/spec/simple-types.html#boolean) shape
 #[derive(Debug, Clone)]
@@ -93,12 +94,16 @@ pub struct DocumentShape {
 #[derive(Debug, Clone)]
 pub struct EnumShape {
     pub(crate) metadata: ShapeMetadata,
+    /// The members of the enum, keyed by member name
+    pub members: HashMap<String, MemberShape>,
 }
 
 /// An [intEnum](https://smithy.io/2.0/spec/simple-types.html#intenum) shape
 #[derive(Debug, Clone)]
 pub struct IntEnumShape {
     pub(crate) metadata: ShapeMetadata,
+    /// The members of the integer enum, keyed by member name
+    pub members: HashMap<String, MemberShape>,
 }
 
 // Implement ProvideShapeMetadata for all simple shapes
@@ -312,19 +317,51 @@ impl DocumentShape {
 
 impl EnumShape {
     /// Create a new enum shape
-    pub fn new(id: ShapeId, traits: HashMap<ShapeId, Trait>) -> Self {
+    pub fn new(id: ShapeId, traits: HashMap<ShapeId, Trait>, members: HashMap<String, MemberShape>) -> Self {
         Self {
             metadata: ShapeMetadata::new(id, traits),
+            members,
         }
+    }
+
+    /// Get all members of the enum
+    pub fn members(&self) -> &HashMap<String, MemberShape> {
+        &self.members
+    }
+
+    /// Get a specific member by name
+    pub fn get_member(&self, name: impl AsRef<str>) -> Option<&MemberShape> {
+        self.members.get(name.as_ref())
+    }
+
+    /// Check if the enum has a member with the given name
+    pub fn has_member(&self, name: impl AsRef<str>) -> bool {
+        self.members.contains_key(name.as_ref())
     }
 }
 
 impl IntEnumShape {
     /// Create a new integer enum shape
-    pub fn new(id: ShapeId, traits: HashMap<ShapeId, Trait>) -> Self {
+    pub fn new(id: ShapeId, traits: HashMap<ShapeId, Trait>, members: HashMap<String, MemberShape>) -> Self {
         Self {
             metadata: ShapeMetadata::new(id, traits),
+            members,
         }
+    }
+
+    /// Get all members of the integer enum
+    pub fn members(&self) -> &HashMap<String, MemberShape> {
+        &self.members
+    }
+
+    /// Get a specific member by name
+    pub fn get_member(&self, name: impl AsRef<str>) -> Option<&MemberShape> {
+        self.members.get(name.as_ref())
+    }
+
+    /// Check if the integer enum has a member with the given name
+    pub fn has_member(&self, name: impl AsRef<str>) -> bool {
+        self.members.contains_key(name.as_ref())
     }
 }
 
