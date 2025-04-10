@@ -7,9 +7,9 @@
 
 use std::collections::HashMap;
 
+use crate::shape::{MemberShape, ProvideShapeMetadata, Shape, ShapeMetadata};
 use crate::shape_id::ShapeId;
 use crate::traits::Trait;
-use crate::shape::{Shape, ShapeMetadata, ProvideShapeMetadata, MemberShape};
 
 /// A [list](https://smithy.io/2.0/spec/aggregate-types.html#list) shape
 #[derive(Debug, Clone)]
@@ -93,7 +93,7 @@ impl ListShape {
             member,
         }
     }
-    
+
     /// Get the member shape
     pub fn member(&self) -> &MemberShape {
         &self.member
@@ -102,19 +102,24 @@ impl ListShape {
 
 impl MapShape {
     /// Create a new map shape
-    pub fn new(id: ShapeId, traits: HashMap<ShapeId, Trait>, key: MemberShape, value: MemberShape) -> Self {
+    pub fn new(
+        id: ShapeId,
+        traits: HashMap<ShapeId, Trait>,
+        key: MemberShape,
+        value: MemberShape,
+    ) -> Self {
         Self {
             metadata: ShapeMetadata::new(id, traits),
             key,
             value,
         }
     }
-    
+
     /// Get the key member shape
     pub fn key(&self) -> &MemberShape {
         &self.key
     }
-    
+
     /// Get the value member shape
     pub fn value(&self) -> &MemberShape {
         &self.value
@@ -129,7 +134,7 @@ impl SetShape {
             member,
         }
     }
-    
+
     /// Get the member shape
     pub fn member(&self) -> &MemberShape {
         &self.member
@@ -138,23 +143,27 @@ impl SetShape {
 
 impl StructureShape {
     /// Create a new structure shape
-    pub fn new(id: ShapeId, traits: HashMap<ShapeId, Trait>, members: HashMap<String, MemberShape>) -> Self {
+    pub fn new(
+        id: ShapeId,
+        traits: HashMap<ShapeId, Trait>,
+        members: HashMap<String, MemberShape>,
+    ) -> Self {
         Self {
             metadata: ShapeMetadata::new(id, traits),
             members,
         }
     }
-    
+
     /// Get all members of the structure
     pub fn members(&self) -> &HashMap<String, MemberShape> {
         &self.members
     }
-    
+
     /// Get a specific member by name
     pub fn get_member(&self, name: &str) -> Option<&MemberShape> {
         self.members.get(name)
     }
-    
+
     /// Check if the structure has a member with the given name
     pub fn has_member(&self, name: &str) -> bool {
         self.members.contains_key(name)
@@ -163,23 +172,27 @@ impl StructureShape {
 
 impl UnionShape {
     /// Create a new union shape
-    pub fn new(id: ShapeId, traits: HashMap<ShapeId, Trait>, members: HashMap<String, MemberShape>) -> Self {
+    pub fn new(
+        id: ShapeId,
+        traits: HashMap<ShapeId, Trait>,
+        members: HashMap<String, MemberShape>,
+    ) -> Self {
         Self {
             metadata: ShapeMetadata::new(id, traits),
             members,
         }
     }
-    
+
     /// Get all members of the union
     pub fn members(&self) -> &HashMap<String, MemberShape> {
         &self.members
     }
-    
+
     /// Get a specific member by name
     pub fn get_member(&self, name: &str) -> Option<&MemberShape> {
         self.members.get(name)
     }
-    
+
     /// Check if the union has a member with the given name
     pub fn has_member(&self, name: &str) -> bool {
         self.members.contains_key(name)

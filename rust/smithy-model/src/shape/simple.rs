@@ -7,10 +7,9 @@
 
 use std::collections::HashMap;
 
+use crate::shape::{MemberShape, ProvideShapeMetadata, Shape, ShapeMetadata};
 use crate::shape_id::ShapeId;
 use crate::traits::Trait;
-use crate::shape::{Shape, ShapeMetadata, ProvideShapeMetadata, MemberShape};
-
 
 /// A [boolean](https://smithy.io/2.0/spec/simple-types.html#boolean) shape
 #[derive(Debug, Clone)]
@@ -317,7 +316,11 @@ impl DocumentShape {
 
 impl EnumShape {
     /// Create a new enum shape
-    pub fn new(id: ShapeId, traits: HashMap<ShapeId, Trait>, members: HashMap<String, MemberShape>) -> Self {
+    pub fn new(
+        id: ShapeId,
+        traits: HashMap<ShapeId, Trait>,
+        members: HashMap<String, MemberShape>,
+    ) -> Self {
         Self {
             metadata: ShapeMetadata::new(id, traits),
             members,
@@ -342,7 +345,11 @@ impl EnumShape {
 
 impl IntEnumShape {
     /// Create a new integer enum shape
-    pub fn new(id: ShapeId, traits: HashMap<ShapeId, Trait>, members: HashMap<String, MemberShape>) -> Self {
+    pub fn new(
+        id: ShapeId,
+        traits: HashMap<ShapeId, Trait>,
+        members: HashMap<String, MemberShape>,
+    ) -> Self {
         Self {
             metadata: ShapeMetadata::new(id, traits),
             members,

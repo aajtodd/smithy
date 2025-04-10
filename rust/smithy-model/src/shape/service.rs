@@ -7,9 +7,9 @@
 
 use std::collections::HashMap;
 
+use crate::shape::{ProvideShapeMetadata, Shape, ShapeMetadata};
 use crate::shape_id::ShapeId;
 use crate::traits::Trait;
-use crate::shape::{Shape, ShapeMetadata, ProvideShapeMetadata};
 
 /// A [service](https://smithy.io/2.0/spec/service-types.html#service) shape
 #[derive(Debug, Clone)]

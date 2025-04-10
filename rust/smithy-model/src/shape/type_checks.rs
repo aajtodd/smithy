@@ -5,12 +5,7 @@
 
 //! Type checking and conversion methods for the Shape enum.
 
-use crate::shape::{
-    Shape, MemberShape, HasShapeId,
-    simple::*,
-    aggregate::*,
-    service::*,
-};
+use crate::shape::{aggregate::*, service::*, simple::*, HasShapeId, MemberShape, Shape};
 
 impl Shape {
     // Type checking methods for simple shapes
@@ -341,182 +336,158 @@ impl Shape {
 
     /// Returns this shape as a boolean shape, panicking if it is not one.
     pub fn expect_boolean(&self) -> &BooleanShape {
-        self.as_boolean().unwrap_or_else(|| {
-            panic!("Expected boolean shape, but got {}", self.id())
-        })
+        self.as_boolean()
+            .unwrap_or_else(|| panic!("Expected boolean shape, but got {}", self.id()))
     }
 
     /// Returns this shape as a byte shape, panicking if it is not one.
     pub fn expect_byte(&self) -> &ByteShape {
-        self.as_byte().unwrap_or_else(|| {
-            panic!("Expected byte shape, but got {}", self.id())
-        })
+        self.as_byte()
+            .unwrap_or_else(|| panic!("Expected byte shape, but got {}", self.id()))
     }
 
     /// Returns this shape as a short shape, panicking if it is not one.
     pub fn expect_short(&self) -> &ShortShape {
-        self.as_short().unwrap_or_else(|| {
-            panic!("Expected short shape, but got {}", self.id())
-        })
+        self.as_short()
+            .unwrap_or_else(|| panic!("Expected short shape, but got {}", self.id()))
     }
 
     /// Returns this shape as an integer shape, panicking if it is not one.
     pub fn expect_integer(&self) -> &IntegerShape {
-        self.as_integer().unwrap_or_else(|| {
-            panic!("Expected integer shape, but got {}", self.id())
-        })
+        self.as_integer()
+            .unwrap_or_else(|| panic!("Expected integer shape, but got {}", self.id()))
     }
 
     /// Returns this shape as a long shape, panicking if it is not one.
     pub fn expect_long(&self) -> &LongShape {
-        self.as_long().unwrap_or_else(|| {
-            panic!("Expected long shape, but got {}", self.id())
-        })
+        self.as_long()
+            .unwrap_or_else(|| panic!("Expected long shape, but got {}", self.id()))
     }
 
     /// Returns this shape as a float shape, panicking if it is not one.
     pub fn expect_float(&self) -> &FloatShape {
-        self.as_float().unwrap_or_else(|| {
-            panic!("Expected float shape, but got {}", self.id())
-        })
+        self.as_float()
+            .unwrap_or_else(|| panic!("Expected float shape, but got {}", self.id()))
     }
 
     /// Returns this shape as a double shape, panicking if it is not one.
     pub fn expect_double(&self) -> &DoubleShape {
-        self.as_double().unwrap_or_else(|| {
-            panic!("Expected double shape, but got {}", self.id())
-        })
+        self.as_double()
+            .unwrap_or_else(|| panic!("Expected double shape, but got {}", self.id()))
     }
 
     /// Returns this shape as a big integer shape, panicking if it is not one.
     pub fn expect_big_integer(&self) -> &BigIntegerShape {
-        self.as_big_integer().unwrap_or_else(|| {
-            panic!("Expected big integer shape, but got {}", self.id())
-        })
+        self.as_big_integer()
+            .unwrap_or_else(|| panic!("Expected big integer shape, but got {}", self.id()))
     }
 
     /// Returns this shape as a big decimal shape, panicking if it is not one.
     pub fn expect_big_decimal(&self) -> &BigDecimalShape {
-        self.as_big_decimal().unwrap_or_else(|| {
-            panic!("Expected big decimal shape, but got {}", self.id())
-        })
+        self.as_big_decimal()
+            .unwrap_or_else(|| panic!("Expected big decimal shape, but got {}", self.id()))
     }
 
     /// Returns this shape as a string shape, panicking if it is not one.
     pub fn expect_string(&self) -> &StringShape {
-        self.as_string().unwrap_or_else(|| {
-            panic!("Expected string shape, but got {}", self.id())
-        })
+        self.as_string()
+            .unwrap_or_else(|| panic!("Expected string shape, but got {}", self.id()))
     }
 
     /// Returns this shape as a blob shape, panicking if it is not one.
     pub fn expect_blob(&self) -> &BlobShape {
-        self.as_blob().unwrap_or_else(|| {
-            panic!("Expected blob shape, but got {}", self.id())
-        })
+        self.as_blob()
+            .unwrap_or_else(|| panic!("Expected blob shape, but got {}", self.id()))
     }
 
     /// Returns this shape as a timestamp shape, panicking if it is not one.
     pub fn expect_timestamp(&self) -> &TimestampShape {
-        self.as_timestamp().unwrap_or_else(|| {
-            panic!("Expected timestamp shape, but got {}", self.id())
-        })
+        self.as_timestamp()
+            .unwrap_or_else(|| panic!("Expected timestamp shape, but got {}", self.id()))
     }
 
     /// Returns this shape as a document shape, panicking if it is not one.
     pub fn expect_document(&self) -> &DocumentShape {
-        self.as_document().unwrap_or_else(|| {
-            panic!("Expected document shape, but got {}", self.id())
-        })
+        self.as_document()
+            .unwrap_or_else(|| panic!("Expected document shape, but got {}", self.id()))
     }
 
     /// Returns this shape as an enum shape, panicking if it is not one.
     pub fn expect_enum(&self) -> &EnumShape {
-        self.as_enum().unwrap_or_else(|| {
-            panic!("Expected enum shape, but got {}", self.id())
-        })
+        self.as_enum()
+            .unwrap_or_else(|| panic!("Expected enum shape, but got {}", self.id()))
     }
 
     /// Returns this shape as an integer enum shape, panicking if it is not one.
     pub fn expect_int_enum(&self) -> &IntEnumShape {
-        self.as_int_enum().unwrap_or_else(|| {
-            panic!("Expected integer enum shape, but got {}", self.id())
-        })
+        self.as_int_enum()
+            .unwrap_or_else(|| panic!("Expected integer enum shape, but got {}", self.id()))
     }
 
     // Expect methods for aggregate shapes
 
     /// Returns this shape as a list shape, panicking if it is not one.
     pub fn expect_list(&self) -> &ListShape {
-        self.as_list().unwrap_or_else(|| {
-            panic!("Expected list shape, but got {}", self.id())
-        })
+        self.as_list()
+            .unwrap_or_else(|| panic!("Expected list shape, but got {}", self.id()))
     }
 
     /// Returns this shape as a map shape, panicking if it is not one.
     pub fn expect_map(&self) -> &MapShape {
-        self.as_map().unwrap_or_else(|| {
-            panic!("Expected map shape, but got {}", self.id())
-        })
+        self.as_map()
+            .unwrap_or_else(|| panic!("Expected map shape, but got {}", self.id()))
     }
 
     /// Returns this shape as a set shape, panicking if it is not one.
     pub fn expect_set(&self) -> &SetShape {
-        self.as_set().unwrap_or_else(|| {
-            panic!("Expected set shape, but got {}", self.id())
-        })
+        self.as_set()
+            .unwrap_or_else(|| panic!("Expected set shape, but got {}", self.id()))
     }
 
     /// Returns this shape as a structure shape, panicking if it is not one.
     pub fn expect_structure(&self) -> &StructureShape {
-        self.as_structure().unwrap_or_else(|| {
-            panic!("Expected structure shape, but got {}", self.id())
-        })
+        self.as_structure()
+            .unwrap_or_else(|| panic!("Expected structure shape, but got {}", self.id()))
     }
 
     /// Returns this shape as a union shape, panicking if it is not one.
     pub fn expect_union(&self) -> &UnionShape {
-        self.as_union().unwrap_or_else(|| {
-            panic!("Expected union shape, but got {}", self.id())
-        })
+        self.as_union()
+            .unwrap_or_else(|| panic!("Expected union shape, but got {}", self.id()))
     }
 
     // Expect methods for service shapes
 
     /// Returns this shape as a service shape, panicking if it is not one.
     pub fn expect_service(&self) -> &ServiceShape {
-        self.as_service().unwrap_or_else(|| {
-            panic!("Expected service shape, but got {}", self.id())
-        })
+        self.as_service()
+            .unwrap_or_else(|| panic!("Expected service shape, but got {}", self.id()))
     }
 
     /// Returns this shape as an operation shape, panicking if it is not one.
     pub fn expect_operation(&self) -> &OperationShape {
-        self.as_operation().unwrap_or_else(|| {
-            panic!("Expected operation shape, but got {}", self.id())
-        })
+        self.as_operation()
+            .unwrap_or_else(|| panic!("Expected operation shape, but got {}", self.id()))
     }
 
     /// Returns this shape as a resource shape, panicking if it is not one.
     pub fn expect_resource(&self) -> &ResourceShape {
-        self.as_resource().unwrap_or_else(|| {
-            panic!("Expected resource shape, but got {}", self.id())
-        })
+        self.as_resource()
+            .unwrap_or_else(|| panic!("Expected resource shape, but got {}", self.id()))
     }
 
     /// Returns this shape as a member shape, panicking if it is not one.
     pub fn expect_member(&self) -> &MemberShape {
-        self.as_member().unwrap_or_else(|| {
-            panic!("Expected member shape, but got {}", self.id())
-        })
+        self.as_member()
+            .unwrap_or_else(|| panic!("Expected member shape, but got {}", self.id()))
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::HashMap;
     use crate::shape_id::ShapeId;
+    use std::collections::HashMap;
 
     #[test]
     fn test_is_methods() {
@@ -524,7 +495,7 @@ mod tests {
         let traits = HashMap::new();
         let string_shape = StringShape::new(id.clone(), traits);
         let shape: Shape = string_shape.into();
-        
+
         assert!(shape.is_string());
         assert!(!shape.is_integer());
         assert!(!shape.is_structure());
@@ -536,7 +507,7 @@ mod tests {
         let traits = HashMap::new();
         let string_shape = StringShape::new(id.clone(), traits);
         let shape: Shape = string_shape.into();
-        
+
         assert!(shape.as_string().is_some());
         assert!(shape.as_integer().is_none());
         assert!(shape.as_structure().is_none());
@@ -548,7 +519,7 @@ mod tests {
         let traits = HashMap::new();
         let string_shape = StringShape::new(id.clone(), traits);
         let shape: Shape = string_shape.into();
-        
+
         let _ = shape.expect_string(); // Should not panic
     }
 
@@ -559,7 +530,7 @@ mod tests {
         let traits = HashMap::new();
         let string_shape = StringShape::new(id.clone(), traits);
         let shape: Shape = string_shape.into();
-        
+
         let _ = shape.expect_integer(); // Should panic
     }
 
@@ -570,7 +541,7 @@ mod tests {
         let members = HashMap::new();
         let structure_shape = StructureShape::new(id.clone(), traits, members);
         let shape: Shape = structure_shape.into();
-        
+
         assert!(shape.is_structure());
         assert!(shape.as_structure().is_some());
         let _ = shape.expect_structure(); // Should not panic
