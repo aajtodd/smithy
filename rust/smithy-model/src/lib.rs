@@ -27,3 +27,5 @@ pub use node::Node;
 pub use shape_id::ShapeId;
 
 pub use error::{Error, Result};
+
+// TODO - define our prelude

@@ -13,7 +13,7 @@ use crate::shape::{
         BigDecimalShape, BigIntegerShape, BlobShape, BooleanShape, ByteShape, DoubleShape,
         FloatShape, IntegerShape, LongShape, ShortShape, StringShape, TimestampShape,
     },
-    Shape,
+    DocumentShape, EnumShape, IntEnumShape, Shape,
 };
 
 impl Shape {
@@ -218,6 +218,30 @@ impl Shape {
         }
     }
 
+    /// Get this shape as an enum shape, if it is one
+    pub fn as_enum(&self) -> Option<&EnumShape> {
+        match self {
+            Shape::Enum(s) => Some(s),
+            _ => None,
+        }
+    }
+
+    /// Get this shape as an intEnum shape, if it is one
+    pub fn as_int_enum(&self) -> Option<&IntEnumShape> {
+        match self {
+            Shape::IntEnum(s) => Some(s),
+            _ => None,
+        }
+    }
+
+    /// Get this shape as a document shape, if it is one
+    pub fn as_document(&self) -> Option<&DocumentShape> {
+        match self {
+            Shape::Document(s) => Some(s),
+            _ => None,
+        }
+    }
+
     /// Get this shape as a list shape, if it is one.
     pub fn as_list(&self) -> Option<&ListShape> {
         match self {
@@ -360,6 +384,24 @@ impl Shape {
     pub fn expect_timestamp(&self) -> &TimestampShape {
         self.as_timestamp()
             .expect("Expected a timestamp shape, but got a different shape type")
+    }
+
+    /// Get this shape as an enum shape, panicking if it is not one.
+    pub fn expect_enum(&self) -> &EnumShape {
+        self.as_enum()
+            .expect("Expected an enum shape, but got a different shape type")
+    }
+
+    /// Get this shape as an intEnum shape, panicking if it is not one.
+    pub fn expect_int_enum(&self) -> &IntEnumShape {
+        self.as_int_enum()
+            .expect("Expected an intEnum shape, but got a different shape type")
+    }
+
+    /// Get this shape as a document shape, panicking if it is not one.
+    pub fn expect_document(&self) -> &DocumentShape {
+        self.as_document()
+            .expect("Expected a document shape, but got a different shape type")
     }
 
     /// Get this shape as a list shape, panicking if it is not one.
