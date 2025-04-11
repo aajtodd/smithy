@@ -29,3 +29,11 @@ pub use shape_id::ShapeId;
 pub use error::{Error, Result};
 
 // TODO - define our prelude
+
+// TODO - mixins, apply statement, etc
+// TODO - resources are likely needing attention
+// TODO - can probably commonize service/resource shapes (e.g. Java EntityShape(Builder))
+// TODO - define model (container) APIs
+// TODO - model parsing
+// TODO - model loading/assembly
+// TODO - model validation framework
