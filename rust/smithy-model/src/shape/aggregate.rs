@@ -5,15 +5,14 @@
 
 //! Aggregate shape types for the Smithy model.
 
-use std::collections::HashMap;
-
 use crate::shape::{
-    builder::{parse_shape_id, ProvideTraitsMut},
+    builder::{self, parse_shape_id, ProvideTraitsMut},
     error::BuildError,
     MemberShape, ProvideShapeMetadata, Shape, ShapeMetadata,
 };
 use crate::shape_id::ShapeId;
 use crate::traits::Trait;
+use std::collections::HashMap;
 
 /// A [list](https://smithy.io/2.0/spec/aggregate-types.html#list) shape
 #[derive(Debug, Clone)]
@@ -51,17 +50,16 @@ impl ListShapeBuilder {
 
     /// Build the list shape.
     pub fn build(self) -> Result<ListShape, BuildError> {
-        let id_str = self.id.ok_or_else(|| BuildError::MissingRequiredField {
-            field: "id".to_string(),
-        })?;
+        use builder::{field_names, required_field_error};
 
+        let id_str = self
+            .id
+            .ok_or_else(|| required_field_error(field_names::ID))?;
         let id = parse_shape_id(&id_str)?;
 
         let member = self
             .member
-            .ok_or_else(|| BuildError::MissingRequiredField {
-                field: "member".to_string(),
-            })?;
+            .ok_or_else(|| required_field_error(field_names::MEMBER))?;
 
         Ok(ListShape {
             metadata: ShapeMetadata::new(id, self.traits),
@@ -80,6 +78,11 @@ impl ListShape {
     /// Create a new builder for this shape type.
     pub fn builder() -> ListShapeBuilder {
         ListShapeBuilder::new()
+    }
+
+    /// Returns the member shape for this list shape.
+    pub fn member(&self) -> &MemberShape {
+        &self.member
     }
 }
 
@@ -128,19 +131,19 @@ impl MapShapeBuilder {
 
     /// Build the map shape.
     pub fn build(self) -> Result<MapShape, BuildError> {
-        let id_str = self.id.ok_or_else(|| BuildError::MissingRequiredField {
-            field: "id".to_string(),
-        })?;
+        use builder::{field_names, required_field_error};
 
+        let id_str = self
+            .id
+            .ok_or_else(|| required_field_error(field_names::ID))?;
         let id = parse_shape_id(&id_str)?;
 
-        let key = self.key.ok_or_else(|| BuildError::MissingRequiredField {
-            field: "key".to_string(),
-        })?;
-
-        let value = self.value.ok_or_else(|| BuildError::MissingRequiredField {
-            field: "value".to_string(),
-        })?;
+        let key = self
+            .key
+            .ok_or_else(|| required_field_error(field_names::KEY))?;
+        let value = self
+            .value
+            .ok_or_else(|| required_field_error(field_names::VALUE))?;
 
         Ok(MapShape {
             metadata: ShapeMetadata::new(id, self.traits),
@@ -161,6 +164,16 @@ impl MapShape {
     pub fn builder() -> MapShapeBuilder {
         MapShapeBuilder::new()
     }
+
+    /// Returns the value member shape for this map
+    pub fn value(&self) -> &MemberShape {
+        &self.value
+    }
+
+    /// Returns the key member shape for this map
+    pub fn key(&self) -> &MemberShape {
+        &self.key
+    }
 }
 
 /// A [set](https://smithy.io/2.0/spec/aggregate-types.html#set) shape
@@ -169,6 +182,70 @@ pub struct SetShape {
     pub(crate) metadata: ShapeMetadata,
     /// The member shape that defines the type of elements in the set
     pub member: MemberShape,
+}
+
+/// Builder for creating a set shape.
+#[derive(Debug, Default)]
+pub struct SetShapeBuilder {
+    id: Option<String>,
+    traits: HashMap<ShapeId, Trait>,
+    member: Option<MemberShape>,
+}
+
+impl SetShapeBuilder {
+    /// Create a new set shape builder.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Set the ID of the set shape.
+    pub fn id(mut self, id: impl Into<String>) -> Self {
+        self.id = Some(id.into());
+        self
+    }
+
+    /// Set the member shape for the set.
+    pub fn member(mut self, member: MemberShape) -> Self {
+        self.member = Some(member);
+        self
+    }
+
+    /// Build the set shape.
+    pub fn build(self) -> Result<SetShape, BuildError> {
+        use builder::{field_names, required_field_error};
+
+        let id_str = self
+            .id
+            .ok_or_else(|| required_field_error(field_names::ID))?;
+        let id = parse_shape_id(&id_str)?;
+
+        let member = self
+            .member
+            .ok_or_else(|| required_field_error(field_names::MEMBER))?;
+
+        Ok(SetShape {
+            metadata: ShapeMetadata::new(id, self.traits),
+            member,
+        })
+    }
+}
+
+impl ProvideTraitsMut for SetShapeBuilder {
+    fn traits_mut(&mut self) -> &mut HashMap<ShapeId, Trait> {
+        &mut self.traits
+    }
+}
+
+impl SetShape {
+    /// Create a new builder for this shape type.
+    pub fn builder() -> SetShapeBuilder {
+        SetShapeBuilder::new()
+    }
+
+    /// Returns the member shape for this set shape.
+    pub fn member(&self) -> &MemberShape {
+        &self.member
+    }
 }
 
 /// A [structure](https://smithy.io/2.0/spec/aggregate-types.html#structure) shape
@@ -207,10 +284,11 @@ impl StructureShapeBuilder {
 
     /// Build the structure shape.
     pub fn build(self) -> Result<StructureShape, BuildError> {
-        let id_str = self.id.ok_or_else(|| BuildError::MissingRequiredField {
-            field: "id".to_string(),
-        })?;
+        use builder::{field_names, required_field_error};
 
+        let id_str = self
+            .id
+            .ok_or_else(|| required_field_error(field_names::ID))?;
         let id = parse_shape_id(&id_str)?;
 
         Ok(StructureShape {
@@ -231,6 +309,11 @@ impl StructureShape {
     pub fn builder() -> StructureShapeBuilder {
         StructureShapeBuilder::new()
     }
+
+    /// Returns all member shapes for this structure
+    pub fn members(&self) -> &HashMap<String, MemberShape> {
+        &self.members
+    }
 }
 
 /// A [union](https://smithy.io/2.0/spec/aggregate-types.html#union) shape
@@ -239,6 +322,66 @@ pub struct UnionShape {
     pub(crate) metadata: ShapeMetadata,
     /// The members of the union, keyed by member name
     pub members: HashMap<String, MemberShape>,
+}
+
+/// Builder for creating a union shape.
+#[derive(Debug, Default)]
+pub struct UnionShapeBuilder {
+    id: Option<String>,
+    traits: HashMap<ShapeId, Trait>,
+    members: HashMap<String, MemberShape>,
+}
+
+impl UnionShapeBuilder {
+    /// Create a new union shape builder.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Set the ID of the union shape.
+    pub fn id(mut self, id: impl Into<String>) -> Self {
+        self.id = Some(id.into());
+        self
+    }
+
+    /// Add a member to the union shape.
+    pub fn member(mut self, name: impl Into<String>, member: MemberShape) -> Self {
+        self.members.insert(name.into(), member);
+        self
+    }
+
+    /// Build the union shape.
+    pub fn build(self) -> Result<UnionShape, BuildError> {
+        use builder::{field_names, required_field_error};
+
+        let id_str = self
+            .id
+            .ok_or_else(|| required_field_error(field_names::ID))?;
+        let id = parse_shape_id(&id_str)?;
+
+        Ok(UnionShape {
+            metadata: ShapeMetadata::new(id, self.traits),
+            members: self.members,
+        })
+    }
+}
+
+impl ProvideTraitsMut for UnionShapeBuilder {
+    fn traits_mut(&mut self) -> &mut HashMap<ShapeId, Trait> {
+        &mut self.traits
+    }
+}
+
+impl UnionShape {
+    /// Create a new builder for this shape type.
+    pub fn builder() -> UnionShapeBuilder {
+        UnionShapeBuilder::new()
+    }
+
+    /// Returns all member shapes for this union
+    pub fn members(&self) -> &HashMap<String, MemberShape> {
+        &self.members
+    }
 }
 
 // Implement ProvideShapeMetadata for all aggregate shapes
@@ -272,122 +415,7 @@ impl ProvideShapeMetadata for UnionShape {
     }
 }
 
-// Implement constructors for aggregate shapes
-impl ListShape {
-    /// Create a new list shape
-    pub fn new(id: ShapeId, traits: HashMap<ShapeId, Trait>, member: MemberShape) -> Self {
-        Self {
-            metadata: ShapeMetadata::new(id, traits),
-            member,
-        }
-    }
-
-    /// Get the member shape
-    pub fn member(&self) -> &MemberShape {
-        &self.member
-    }
-}
-
-impl MapShape {
-    /// Create a new map shape
-    pub fn new(
-        id: ShapeId,
-        traits: HashMap<ShapeId, Trait>,
-        key: MemberShape,
-        value: MemberShape,
-    ) -> Self {
-        Self {
-            metadata: ShapeMetadata::new(id, traits),
-            key,
-            value,
-        }
-    }
-
-    /// Get the key member shape
-    pub fn key(&self) -> &MemberShape {
-        &self.key
-    }
-
-    /// Get the value member shape
-    pub fn value(&self) -> &MemberShape {
-        &self.value
-    }
-}
-
-impl SetShape {
-    /// Create a new set shape
-    pub fn new(id: ShapeId, traits: HashMap<ShapeId, Trait>, member: MemberShape) -> Self {
-        Self {
-            metadata: ShapeMetadata::new(id, traits),
-            member,
-        }
-    }
-
-    /// Get the member shape
-    pub fn member(&self) -> &MemberShape {
-        &self.member
-    }
-}
-
-impl StructureShape {
-    /// Create a new structure shape
-    pub fn new(
-        id: ShapeId,
-        traits: HashMap<ShapeId, Trait>,
-        members: HashMap<String, MemberShape>,
-    ) -> Self {
-        Self {
-            metadata: ShapeMetadata::new(id, traits),
-            members,
-        }
-    }
-
-    /// Get all members of the structure
-    pub fn members(&self) -> &HashMap<String, MemberShape> {
-        &self.members
-    }
-
-    /// Get a specific member by name
-    pub fn get_member(&self, name: &str) -> Option<&MemberShape> {
-        self.members.get(name)
-    }
-
-    /// Check if the structure has a member with the given name
-    pub fn has_member(&self, name: &str) -> bool {
-        self.members.contains_key(name)
-    }
-}
-
-impl UnionShape {
-    /// Create a new union shape
-    pub fn new(
-        id: ShapeId,
-        traits: HashMap<ShapeId, Trait>,
-        members: HashMap<String, MemberShape>,
-    ) -> Self {
-        Self {
-            metadata: ShapeMetadata::new(id, traits),
-            members,
-        }
-    }
-
-    /// Get all members of the union
-    pub fn members(&self) -> &HashMap<String, MemberShape> {
-        &self.members
-    }
-
-    /// Get a specific member by name
-    pub fn get_member(&self, name: &str) -> Option<&MemberShape> {
-        self.members.get(name)
-    }
-
-    /// Check if the union has a member with the given name
-    pub fn has_member(&self, name: &str) -> bool {
-        self.members.contains_key(name)
-    }
-}
-
-// Implement From traits for converting shape structs to Shape enum
+// Implement From for all aggregate shapes
 impl From<ListShape> for Shape {
     fn from(shape: ListShape) -> Self {
         Shape::List(shape)

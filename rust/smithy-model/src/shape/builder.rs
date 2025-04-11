@@ -12,6 +12,35 @@ use crate::shape::error::BuildError;
 use crate::shape_id::ShapeId;
 use crate::traits::Trait;
 
+/// Common field names used in builders
+pub(crate) mod field_names {
+    /// ID field name
+    pub(crate) const ID: &str = "id";
+    /// Target field name
+    pub(crate) const TARGET: &str = "target";
+    /// Key field name
+    pub(crate) const KEY: &str = "key";
+    /// Value field name
+    pub(crate) const VALUE: &str = "value";
+    /// Member field name
+    pub(crate) const MEMBER: &str = "member";
+}
+
+/// Helper functions for common builder operations
+pub(crate) fn required_field_error(field: &str) -> BuildError {
+    BuildError::MissingRequiredField {
+        field: field.to_string(),
+    }
+}
+
+/// Helper function to parse a string into a ShapeId or return an appropriate build error.
+pub(crate) fn parse_shape_id(id_str: &str) -> Result<ShapeId, BuildError> {
+    ShapeId::from_str(id_str).map_err(|e| BuildError::InvalidValue {
+        field: field_names::ID.to_string(),
+        reason: format!("{}", e),
+    })
+}
+
 /// Trait for accessing the traits container.
 pub trait ProvideTraitsMut {
     /// Get mutable access to the traits container.
@@ -25,9 +54,11 @@ pub trait ShapeBuilderExt: ProvideTraitsMut + Sized {
     /// # Examples
     ///
     /// ```
-    /// # use smithy_model::shape::{HasShapeId, HasTraits, ShapeBuilderExt, StringShape};
-    /// # use smithy_model::shape_id::ShapeId;
-    /// #
+    /// use smithy_model::shape::StringShape;
+    /// use smithy_model::shape::{HasShapeId, HasTraits};
+    /// use smithy_model::shape::ShapeBuilderExt;
+    /// use smithy_model::shape_id::ShapeId;
+    ///
     /// let shape = StringShape::builder()
     ///     .id("example.foo#MyString")
     ///     .documentation("A string shape")
@@ -49,9 +80,11 @@ pub trait ShapeBuilderExt: ProvideTraitsMut + Sized {
     /// # Examples
     ///
     /// ```
-    /// # use smithy_model::shape::{HasShapeId, HasTraits, ShapeBuilderExt, StringShape};
-    /// # use smithy_model::shape_id::ShapeId;
-    /// #
+    /// use smithy_model::shape::StringShape;
+    /// use smithy_model::shape::{HasShapeId, HasTraits};
+    /// use smithy_model::shape::ShapeBuilderExt;
+    /// use smithy_model::shape_id::ShapeId;
+    ///
     /// let shape = StringShape::builder()
     ///     .id("example.foo#MyString")
     ///     .required()
@@ -72,10 +105,12 @@ pub trait ShapeBuilderExt: ProvideTraitsMut + Sized {
     /// # Examples
     ///
     /// ```
-    /// # use smithy_model::shape::{HasShapeId, HasTraits, ShapeBuilderExt, StringShape};
-    /// # use smithy_model::shape_id::ShapeId;
-    /// # use smithy_model::traits::Trait;
-    /// #
+    /// use smithy_model::shape::StringShape;
+    /// use smithy_model::shape::{HasShapeId, HasTraits};
+    /// use smithy_model::shape::ShapeBuilderExt;
+    /// use smithy_model::shape_id::ShapeId;
+    /// use smithy_model::traits::Trait;
+    ///
     /// let trait_id = ShapeId::new("example.foo", "customTrait").unwrap();
     /// let custom_trait = Trait::new(trait_id.clone());
     ///
@@ -96,11 +131,3 @@ pub trait ShapeBuilderExt: ProvideTraitsMut + Sized {
 
 // Implement ShapeBuilderExt for all types that implement ProvideTraitsMut
 impl<T: ProvideTraitsMut> ShapeBuilderExt for T {}
-
-/// Helper function to parse a string into a ShapeId.
-pub(crate) fn parse_shape_id(id_str: &str) -> Result<ShapeId, BuildError> {
-    ShapeId::from_str(id_str).map_err(|e| BuildError::InvalidValue {
-        field: "id".to_string(),
-        reason: format!("{}", e),
-    })
-}

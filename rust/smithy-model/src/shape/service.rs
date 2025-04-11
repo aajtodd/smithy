@@ -8,7 +8,7 @@
 use std::collections::HashMap;
 
 use crate::shape::{
-    builder::{parse_shape_id, ProvideTraitsMut},
+    builder::{self, parse_shape_id, ProvideTraitsMut},
     error::BuildError,
     ProvideShapeMetadata, Shape, ShapeMetadata,
 };
@@ -81,10 +81,11 @@ impl ServiceShapeBuilder {
 
     /// Build the service shape.
     pub fn build(self) -> Result<ServiceShape, BuildError> {
-        let id_str = self.id.ok_or_else(|| BuildError::MissingRequiredField {
-            field: "id".to_string(),
-        })?;
+        use builder::{field_names, required_field_error};
 
+        let id_str = self
+            .id
+            .ok_or_else(|| required_field_error(field_names::ID))?;
         let id = parse_shape_id(&id_str)?;
 
         Ok(ServiceShape {
@@ -169,10 +170,11 @@ impl OperationShapeBuilder {
 
     /// Build the operation shape.
     pub fn build(self) -> Result<OperationShape, BuildError> {
-        let id_str = self.id.ok_or_else(|| BuildError::MissingRequiredField {
-            field: "id".to_string(),
-        })?;
+        use builder::{field_names, required_field_error};
 
+        let id_str = self
+            .id
+            .ok_or_else(|| required_field_error(field_names::ID))?;
         let id = parse_shape_id(&id_str)?;
 
         Ok(OperationShape {
@@ -308,10 +310,11 @@ impl ResourceShapeBuilder {
 
     /// Build the resource shape.
     pub fn build(self) -> Result<ResourceShape, BuildError> {
-        let id_str = self.id.ok_or_else(|| BuildError::MissingRequiredField {
-            field: "id".to_string(),
-        })?;
+        use builder::{field_names, required_field_error};
 
+        let id_str = self
+            .id
+            .ok_or_else(|| required_field_error(field_names::ID))?;
         let id = parse_shape_id(&id_str)?;
 
         Ok(ResourceShape {

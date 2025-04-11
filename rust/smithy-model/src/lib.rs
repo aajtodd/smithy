@@ -21,6 +21,7 @@ pub mod traits;
 
 pub mod node;
 pub mod shape_id;
+
 pub use node::Node;
 
 pub use shape_id::ShapeId;

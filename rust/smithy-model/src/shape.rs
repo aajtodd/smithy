@@ -5,16 +5,16 @@
 
 //! Shape types for the Smithy model.
 
+use std::collections::HashMap;
+use std::hash::{Hash, Hasher};
+
 mod aggregate;
 mod builder;
 mod error;
+mod member;
 mod service;
 mod simple;
 mod type_checks;
-
-use std::collections::HashMap;
-use std::fmt;
-use std::hash::{Hash, Hasher};
 
 use crate::shape_id::ShapeId;
 use crate::traits::Trait;
@@ -22,6 +22,7 @@ use crate::traits::Trait;
 pub use self::aggregate::*;
 pub use self::builder::*;
 pub use self::error::*;
+pub use self::member::*;
 pub use self::service::*;
 pub use self::simple::*;
 
@@ -158,7 +159,7 @@ pub enum Shape {
     /// A [resource](https://smithy.io/2.0/spec/service-types.html#resource) shape
     Resource(ResourceShape),
 
-    // Special types
+    // Member shape
     /// A [member](https://smithy.io/2.0/spec/model.html#member-shapes) shape
     Member(MemberShape),
 }
@@ -201,44 +202,6 @@ impl AsRef<ShapeId> for Shape {
     }
 }
 
-/// A [member](https://smithy.io/2.0/spec/model.html#member-shapes) shape
-#[derive(Debug, Clone)]
-pub struct MemberShape {
-    metadata: ShapeMetadata,
-    /// The name of the member
-    pub member_name: String,
-    /// The target shape that this member references
-    pub target: ShapeId,
-}
-
-impl ProvideShapeMetadata for MemberShape {
-    fn meta(&self) -> &ShapeMetadata {
-        &self.metadata
-    }
-}
-
-impl MemberShape {
-    /// Create a new member shape
-    pub fn new(
-        id: ShapeId,
-        traits: HashMap<ShapeId, Trait>,
-        member_name: String,
-        target: ShapeId,
-    ) -> Self {
-        Self {
-            metadata: ShapeMetadata::new(id, traits),
-            member_name,
-            target,
-        }
-    }
-}
-
-impl From<MemberShape> for Shape {
-    fn from(shape: MemberShape) -> Self {
-        Shape::Member(shape)
-    }
-}
-
 // Implement basic equality and hashing for Shape
 impl PartialEq for Shape {
     fn eq(&self, other: &Self) -> bool {
@@ -254,62 +217,62 @@ impl Hash for Shape {
     }
 }
 
-// Implement Display for Shape
-impl fmt::Display for Shape {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.id())
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::shape::builder::ShapeBuilderExt;
 
     #[test]
     fn test_shape_id_access() {
-        let id = ShapeId::new("com.example", "MyString").unwrap();
-        let traits = HashMap::new();
-        let shape = StringShape::new(id.clone(), traits);
+        let shape = StringShape::builder()
+            .id("example.foo#MyString")
+            .build()
+            .unwrap();
+        let shape: Shape = shape.into();
 
-        assert_eq!(shape.id(), &id);
+        assert_eq!(shape.id().to_string(), "example.foo#MyString");
     }
 
     #[test]
     fn test_shape_traits_access() {
-        let id = ShapeId::new("com.example", "MyString").unwrap();
         let trait_id = ShapeId::new("smithy.api", "documentation").unwrap();
 
-        let mut traits = HashMap::new();
-        traits.insert(trait_id.clone(), Trait::new(trait_id.clone()));
+        let shape = StringShape::builder()
+            .id("example.foo#MyString")
+            .documentation("A string shape")
+            .build()
+            .unwrap();
+        let shape: Shape = shape.into();
 
-        let shape = StringShape::new(id.clone(), traits);
-
-        assert!(shape.has_trait(&trait_id));
-        assert!(shape.get_trait(&trait_id).is_some());
+        assert!(shape.has_trait(trait_id));
     }
 
     #[test]
     fn test_shape_enum_conversion() {
-        let id = ShapeId::new("com.example", "MyString").unwrap();
-        let traits = HashMap::new();
-        let string_shape = StringShape::new(id.clone(), traits);
-
+        let string_shape = StringShape::builder()
+            .id("example.foo#MyString")
+            .build()
+            .unwrap();
         let shape: Shape = string_shape.into();
 
-        assert_eq!(shape.id(), &id);
-        assert!(matches!(shape, Shape::String(_)));
+        match shape {
+            Shape::String(_) => {}
+            _ => panic!("Expected Shape::String"),
+        }
     }
 
     #[test]
     fn test_member_shape() {
-        let id = ShapeId::new_with_member("com.example", "MyStruct", "myMember").unwrap();
-        let traits = HashMap::new();
-        let target = ShapeId::new("com.example", "String").unwrap();
+        let target = ShapeId::new("smithy.api", "String").unwrap();
+        let member = MemberShape::builder()
+            .id("example.foo#MyStruct$name")
+            .member_name("name")
+            .target(target.clone())
+            .build()
+            .unwrap();
 
-        let member = MemberShape::new(id.clone(), traits, "myMember".to_string(), target.clone());
-
-        assert_eq!(member.id(), &id);
-        assert_eq!(member.member_name, "myMember");
+        assert_eq!(member.id().to_string(), "example.foo#MyStruct$name");
+        assert_eq!(member.member_name, "name");
         assert_eq!(member.target, target);
     }
 }
