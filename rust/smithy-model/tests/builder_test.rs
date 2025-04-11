@@ -76,8 +76,8 @@ fn test_structure_shape_builder_with_members() {
 
     let shape = StructureShape::builder()
         .id("example.foo#MyStruct")
-        .member("name", member1)
-        .member("age", member2)
+        .member(member1)
+        .member(member2)
         .build()
         .unwrap();
 

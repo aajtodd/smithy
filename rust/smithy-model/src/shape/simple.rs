@@ -14,6 +14,7 @@ use crate::shape_id::ShapeId;
 use crate::traits::Trait;
 use paste::paste;
 use std::collections::HashMap;
+use std::hash::Hash;
 
 /// Macro to define a simple shape type with its builder
 macro_rules! define_simple_shape {
@@ -24,7 +25,7 @@ macro_rules! define_simple_shape {
         paste! {
             $(#[$shape_meta])*
             /// A [$shape_name]($doc_link) shape
-            #[derive(Debug, Clone)]
+            #[derive(Debug, Clone, PartialEq, Eq)]
             pub struct $shape_name {
                 pub(crate) metadata: ShapeMetadata,
             }
@@ -72,6 +73,14 @@ macro_rules! define_simple_shape {
                 pub fn builder() -> [<$shape_name Builder>] {
                     [<$shape_name Builder>]::new()
                 }
+
+                /// Convert this shape back into a builder
+                pub fn to_builder(self) -> [<$shape_name Builder>] {
+                    [<$shape_name Builder>] {
+                        id: Some(self.metadata.id.to_string()),
+                        traits: self.metadata.traits,
+                    }
+                }
             }
 
             impl ProvideShapeMetadata for $shape_name {
@@ -83,6 +92,12 @@ macro_rules! define_simple_shape {
             impl From<$shape_name> for Shape {
                 fn from(shape: $shape_name) -> Self {
                     Shape::$shape_variant(shape)
+                }
+            }
+
+            impl Hash for $shape_name {
+                fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+                    self.metadata.id.hash(state);
                 }
             }
         }
@@ -169,7 +184,7 @@ define_simple_shape!(
 );
 
 /// An [enum](https://smithy.io/2.0/spec/simple-types.html#enum) shape
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct EnumShape {
     pub(crate) metadata: ShapeMetadata,
     /// The enum members, keyed by member name
@@ -197,9 +212,20 @@ impl EnumShapeBuilder {
     }
 
     /// Add a member to the enum shape.
-    pub fn member(mut self, name: impl Into<String>, member: MemberShape) -> Self {
-        let name_str = name.into();
-        self.members.insert(name_str, member);
+    pub fn member(mut self, member: MemberShape) -> Self {
+        // FIXME - need the equivalent of this java
+        // if (!member.getTarget().equals(UnitTypeTrait.UNIT)) {
+        //     throw new SourceException(String.format(
+        //         "Enum members may only target `smithy.api#Unit`, but found `%s`",
+        //         member.getTarget()), getSourceLocation());
+        // }
+        // if (!member.hasTrait(EnumValueTrait.ID)) {
+        //     member = member.toBuilder()
+        //         .addTrait(EnumValueTrait.builder().stringValue(member.getMemberName()).build())
+        //         .build();
+        // }
+
+        self.members.insert(member.member_name.clone(), member);
         self
     }
 
@@ -237,6 +263,15 @@ impl EnumShape {
     pub fn builder() -> EnumShapeBuilder {
         EnumShapeBuilder::new()
     }
+
+    /// Convert this shape back into a builder
+    pub fn to_builder(self) -> EnumShapeBuilder {
+        EnumShapeBuilder {
+            id: Some(self.metadata.id.to_string()),
+            traits: self.metadata.traits,
+            members: self.members,
+        }
+    }
 }
 
 impl ProvideShapeMetadata for EnumShape {
@@ -252,7 +287,7 @@ impl From<EnumShape> for Shape {
 }
 
 /// An [intEnum](https://smithy.io/2.0/spec/simple-types.html#intenum) shape
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct IntEnumShape {
     pub(crate) metadata: ShapeMetadata,
     /// The integer enum members, keyed by member name
@@ -283,8 +318,14 @@ impl IntEnumShapeBuilder {
     }
 
     /// Add a member to the integer enum shape.
-    pub fn member(mut self, name: impl Into<String>, value: i64, member: MemberShape) -> Self {
-        let name_str = name.into();
+    pub fn member(mut self, member: MemberShape, value: i64) -> Self {
+        // FIXME - need equivalent of this java
+        // if (!member.getTarget().equals(UnitTypeTrait.UNIT)) {
+        //     throw new SourceException(String.format(
+        //         "intEnum members may only target `smithy.api#Unit`, but found `%s`",
+        //         member.getTarget()), getSourceLocation());
+        // }
+        let name_str = member.member_name.clone();
         self.members.insert(name_str.clone(), member);
         self.values.insert(name_str, value);
         self
@@ -336,6 +377,16 @@ impl IntEnumShape {
     pub fn builder() -> IntEnumShapeBuilder {
         IntEnumShapeBuilder::new()
     }
+
+    /// Convert this shape back into a builder
+    pub fn to_builder(self) -> IntEnumShapeBuilder {
+        IntEnumShapeBuilder {
+            id: Some(self.metadata.id.to_string()),
+            traits: self.metadata.traits,
+            members: self.members,
+            values: self.values,
+        }
+    }
 }
 
 impl ProvideShapeMetadata for IntEnumShape {
@@ -347,5 +398,177 @@ impl ProvideShapeMetadata for IntEnumShape {
 impl From<IntEnumShape> for Shape {
     fn from(shape: IntEnumShape) -> Self {
         Shape::IntEnum(shape)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::str::FromStr;
+    // Simple shape tests
+    use super::*;
+    use crate::shape::builder::ShapeBuilderExt;
+    use crate::shape::{HasShapeId, HasTraits};
+
+    #[test]
+    fn test_string_shape_construction() {
+        let shape = StringShape::builder()
+            .id("example.foo#MyString")
+            .build()
+            .unwrap();
+
+        assert_eq!(shape.id().to_string(), "example.foo#MyString");
+        assert_eq!(shape.traits().len(), 0);
+    }
+
+    #[test]
+    fn test_boolean_shape_construction() {
+        let shape = BooleanShape::builder()
+            .id("example.foo#MyBoolean")
+            .build()
+            .unwrap();
+
+        assert_eq!(shape.id().to_string(), "example.foo#MyBoolean");
+        assert_eq!(shape.traits().len(), 0);
+    }
+
+    #[test]
+    fn test_document_shape_construction() {
+        let shape = DocumentShape::builder()
+            .id("example.foo#MyDocument")
+            .build()
+            .unwrap();
+
+        assert_eq!(shape.id().to_string(), "example.foo#MyDocument");
+        assert_eq!(shape.traits().len(), 0);
+    }
+
+    #[test]
+    fn test_simple_shape_with_traits() {
+        let shape = StringShape::builder()
+            .id("example.foo#MyString")
+            .documentation("A test string")
+            .build()
+            .unwrap();
+
+        assert_eq!(shape.id().to_string(), "example.foo#MyString");
+        assert_eq!(shape.traits().len(), 1);
+        assert!(shape.has_trait(ShapeId::from_str("smithy.api#documentation").unwrap()));
+    }
+
+    // Enum shape tests
+
+    #[test]
+    fn test_enum_shape_construction() {
+        let unit_id = ShapeId::new("smithy.api", "Unit").unwrap();
+
+        let shape = EnumShape::builder()
+            .id("example.foo#MyEnum")
+            .member(
+                MemberShape::builder()
+                    .id("example.foo#MyEnum$FIRST")
+                    .member_name("FIRST")
+                    .target(unit_id.clone())
+                    .build()
+                    .unwrap(),
+            )
+            .member(
+                MemberShape::builder()
+                    .id("example.foo#MyEnum$SECOND")
+                    .member_name("SECOND")
+                    .target(unit_id.clone())
+                    .build()
+                    .unwrap(),
+            )
+            .build()
+            .unwrap();
+
+        assert_eq!(shape.id().to_string(), "example.foo#MyEnum");
+        assert_eq!(shape.members.len(), 2);
+        assert!(shape.members.contains_key("FIRST"));
+        assert!(shape.members.contains_key("SECOND"));
+    }
+
+    #[test]
+    fn test_enum_shape_empty_members() {
+        let result = EnumShape::builder().id("example.foo#MyEnum").build();
+
+        assert!(result.is_err());
+        match result {
+            Err(BuildError::InvalidValue { field, reason }) => {
+                assert_eq!(field, "members");
+                assert_eq!(reason, "Enum shape must have at least one member");
+            }
+            _ => panic!("Expected InvalidValue error"),
+        }
+    }
+
+    #[test]
+    fn test_int_enum_shape_construction() {
+        let unit_id = ShapeId::new("smithy.api", "Unit").unwrap();
+
+        let shape = IntEnumShape::builder()
+            .id("example.foo#MyIntEnum")
+            .member(
+                MemberShape::builder()
+                    .id("example.foo#MyIntEnum$FIRST")
+                    .member_name("FIRST")
+                    .target(unit_id.clone())
+                    .build()
+                    .unwrap(),
+                1,
+            )
+            .member(
+                MemberShape::builder()
+                    .id("example.foo#MyIntEnum$SECOND")
+                    .member_name("SECOND")
+                    .target(unit_id.clone())
+                    .build()
+                    .unwrap(),
+                2,
+            )
+            .build()
+            .unwrap();
+
+        assert_eq!(shape.id().to_string(), "example.foo#MyIntEnum");
+        assert_eq!(shape.members.len(), 2);
+        assert_eq!(shape.values.len(), 2);
+        assert_eq!(shape.values.get("FIRST"), Some(&1));
+        assert_eq!(shape.values.get("SECOND"), Some(&2));
+    }
+
+    #[test]
+    fn test_int_enum_shape_duplicate_values() {
+        let unit_id = ShapeId::new("smithy.api", "Unit").unwrap();
+
+        let result = IntEnumShape::builder()
+            .id("example.foo#MyIntEnum")
+            .member(
+                MemberShape::builder()
+                    .id("example.foo#MyIntEnum$FIRST")
+                    .member_name("FIRST")
+                    .target(unit_id.clone())
+                    .build()
+                    .unwrap(),
+                1,
+            )
+            .member(
+                MemberShape::builder() // Same value as FIRST
+                    .id("example.foo#MyIntEnum$SECOND")
+                    .member_name("SECOND")
+                    .target(unit_id.clone())
+                    .build()
+                    .unwrap(),
+                1,
+            )
+            .build();
+
+        assert!(result.is_err());
+        match result {
+            Err(BuildError::InvalidValue { field, reason }) => {
+                assert_eq!(field, "values");
+                assert!(reason.contains("Duplicate integer value: 1"));
+            }
+            _ => panic!("Expected InvalidValue error"),
+        }
     }
 }

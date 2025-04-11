@@ -7,7 +7,7 @@ use crate::{shape, ShapeId};
 use std::collections::HashMap;
 
 /// A [member](https://smithy.io/2.0/spec/model.html#member-shapes) shape
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct MemberShape {
     metadata: ShapeMetadata,
     /// The name of the member

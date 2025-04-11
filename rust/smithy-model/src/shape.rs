@@ -26,86 +26,11 @@ pub use self::member::*;
 pub use self::service::*;
 pub use self::simple::*;
 
-/// Common trait for all shape types providing access to shape ID
-pub trait HasShapeId {
-    /// Get the shape ID
-    fn id(&self) -> &ShapeId;
-}
-
-/// Common trait for all shape types providing access to traits
-pub trait HasTraits {
-    /// Get all traits applied to this shape
-    fn traits(&self) -> &HashMap<ShapeId, Trait>;
-
-    /// Check if this shape has a specific trait
-    fn has_trait(&self, trait_id: impl AsRef<ShapeId>) -> bool {
-        self.traits().contains_key(trait_id.as_ref())
-    }
-
-    /// Get a specific trait by ID
-    fn get_trait(&self, trait_id: impl AsRef<ShapeId>) -> Option<&Trait> {
-        self.traits().get(trait_id.as_ref())
-    }
-
-    // FIXME - uncomment and revisit after the updated trait design is available
-    // /// Get a specific trait with a concrete type
-    // fn get_trait_as<T: Trait + 'static>(&self) -> Option<&T> {
-    //     self.get_trait(T::static_id())
-    //         .and_then(|t| t.as_any().downcast_ref::<T>())
-    // }
-    //
-    // /// Get a specific trait with a concrete type, panicking if not found or wrong type
-    // fn expect_trait<T: Trait + 'static>(&self) -> &T {
-    //     self.get_trait_as::<T>().unwrap_or_else(|| {
-    //         panic!(
-    //             "Expected trait {} on shape {}, but it was not found or had the wrong type",
-    //             T::static_id(),
-    //             self.id()
-    //         )
-    //     })
-    // }
-}
-
-/// Private trait for accessing shape metadata
-pub(crate) trait ProvideShapeMetadata {
-    /// Get the shape metadata
-    fn meta(&self) -> &ShapeMetadata;
-}
-
-/// Common metadata for all shapes (implementation detail)
-#[derive(Debug, Clone)]
-pub(crate) struct ShapeMetadata {
-    /// The shape ID
-    id: ShapeId,
-    /// Traits applied to this shape
-    traits: HashMap<ShapeId, Trait>,
-}
-
-impl ShapeMetadata {
-    /// Create new shape metadata
-    pub(crate) fn new(id: ShapeId, traits: HashMap<ShapeId, Trait>) -> Self {
-        Self { id, traits }
-    }
-}
-
-// Blanket implementations for any type that provides shape metadata
-impl<T: ProvideShapeMetadata> HasShapeId for T {
-    fn id(&self) -> &ShapeId {
-        &self.meta().id
-    }
-}
-
-impl<T: ProvideShapeMetadata> HasTraits for T {
-    fn traits(&self) -> &HashMap<ShapeId, Trait> {
-        &self.meta().traits
-    }
-}
-
 /// A Smithy shape.
 ///
 /// Shapes are the fundamental building blocks of a Smithy model. Each shape has a unique ID,
 /// a set of traits, and a specific kind that determines its behavior and properties.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Shape {
     // Simple types
     /// A [boolean](https://smithy.io/2.0/spec/simple-types.html#boolean) shape
@@ -202,25 +127,105 @@ impl AsRef<ShapeId> for Shape {
     }
 }
 
-// Implement basic equality and hashing for Shape
-impl PartialEq for Shape {
-    fn eq(&self, other: &Self) -> bool {
-        self.id() == other.id()
-    }
-}
-
-impl Eq for Shape {}
-
 impl Hash for Shape {
     fn hash<H: Hasher>(&self, state: &mut H) {
+        // Hash the shape type (variant)
+        std::mem::discriminant(self).hash(state);
+        // Hash the ID
         self.id().hash(state);
+        // We don't hash members and traits for performance reasons,
+        // similar to the Java implementation which only hashes type and ID
     }
 }
+
+/// Common trait for all shape types providing access to shape ID
+pub trait HasShapeId {
+    /// Get the shape ID
+    fn id(&self) -> &ShapeId;
+}
+
+/// Common trait for all shape types providing access to traits
+pub trait HasTraits {
+    /// Get all traits applied to this shape
+    fn traits(&self) -> &HashMap<ShapeId, Trait>;
+
+    /// Check if this shape has a specific trait
+    fn has_trait(&self, trait_id: impl AsRef<ShapeId>) -> bool {
+        self.traits().contains_key(trait_id.as_ref())
+    }
+
+    /// Get a specific trait by ID
+    fn get_trait(&self, trait_id: impl AsRef<ShapeId>) -> Option<&Trait> {
+        self.traits().get(trait_id.as_ref())
+    }
+
+    // FIXME - uncomment and revisit after the updated trait design is available
+    // /// Get a specific trait with a concrete type
+    // fn get_trait_as<T: Trait + 'static>(&self) -> Option<&T> {
+    //     self.get_trait(T::static_id())
+    //         .and_then(|t| t.as_any().downcast_ref::<T>())
+    // }
+    //
+    // /// Get a specific trait with a concrete type, panicking if not found or wrong type
+    // fn expect_trait<T: Trait + 'static>(&self) -> &T {
+    //     self.get_trait_as::<T>().unwrap_or_else(|| {
+    //         panic!(
+    //             "Expected trait {} on shape {}, but it was not found or had the wrong type",
+    //             T::static_id(),
+    //             self.id()
+    //         )
+    //     })
+    // }
+}
+
+/// Private trait for accessing shape metadata
+pub(crate) trait ProvideShapeMetadata {
+    /// Get the shape metadata
+    fn meta(&self) -> &ShapeMetadata;
+}
+
+/// Common metadata for all shapes (implementation detail)
+#[derive(Debug, Clone)]
+pub(crate) struct ShapeMetadata {
+    /// The shape ID
+    id: ShapeId,
+    /// Traits applied to this shape
+    traits: HashMap<ShapeId, Trait>,
+}
+
+impl ShapeMetadata {
+    /// Create new shape metadata
+    pub(crate) fn new(id: ShapeId, traits: HashMap<ShapeId, Trait>) -> Self {
+        Self { id, traits }
+    }
+}
+
+// Blanket implementations for any type that provides shape metadata
+impl<T: ProvideShapeMetadata> HasShapeId for T {
+    fn id(&self) -> &ShapeId {
+        &self.meta().id
+    }
+}
+
+impl<T: ProvideShapeMetadata> HasTraits for T {
+    fn traits(&self) -> &HashMap<ShapeId, Trait> {
+        &self.meta().traits
+    }
+}
+
+impl PartialEq for ShapeMetadata {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id && self.traits == other.traits
+    }
+}
+
+impl Eq for ShapeMetadata {}
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::shape::builder::ShapeBuilderExt;
+    use std::str::FromStr;
 
     #[test]
     fn test_shape_id_access() {
@@ -274,5 +279,237 @@ mod tests {
         assert_eq!(member.id().to_string(), "example.foo#MyStruct$name");
         assert_eq!(member.member_name, "name");
         assert_eq!(member.target, target);
+    }
+
+    // Core trait tests
+
+    /// Tests for the core traits (HasShapeId, HasTraits, ProvideShapeMetadata)
+    mod trait_tests {
+        use super::*;
+        use std::str::FromStr;
+
+        // Test fixture - a simple shape that implements ProvideShapeMetadata
+        fn create_test_shape() -> StringShape {
+            StringShape::builder()
+                .id("example.foo#TestShape")
+                .documentation("Test documentation")
+                .build()
+                .unwrap()
+        }
+
+        #[test]
+        fn test_has_shape_id() {
+            let shape = create_test_shape();
+
+            // Test HasShapeId methods
+            assert_eq!(shape.id().to_string(), "example.foo#TestShape");
+            assert_eq!(shape.id().namespace(), "example.foo");
+            assert_eq!(shape.id().name(), "TestShape");
+        }
+
+        #[test]
+        fn test_has_traits() {
+            let shape = create_test_shape();
+            let trait_id = ShapeId::new("smithy.api", "documentation").unwrap();
+            let nonexistent = ShapeId::from_str("smithy.api#nonexistent").unwrap();
+
+            // Test HasTraits methods
+            assert!(shape.has_trait(&trait_id));
+            assert!(shape.has_trait(&trait_id));
+            assert!(shape.get_trait(&trait_id).is_some());
+            assert!(shape.get_trait(&nonexistent).is_none());
+        }
+
+        #[test]
+        fn test_shape_metadata() {
+            let shape = create_test_shape();
+
+            // Test that metadata is correctly initialized
+            assert_eq!(shape.meta().id.to_string(), "example.foo#TestShape");
+            assert_eq!(shape.meta().traits.len(), 1);
+            assert!(shape
+                .meta()
+                .traits
+                .contains_key(&ShapeId::new("smithy.api", "documentation").unwrap()));
+        }
+
+        #[test]
+        fn test_blanket_implementations() {
+            // Test that blanket implementations work for different shape types
+            let string_shape = StringShape::builder()
+                .id("example.foo#String")
+                .build()
+                .unwrap();
+
+            let boolean_shape = BooleanShape::builder()
+                .id("example.foo#Boolean")
+                .build()
+                .unwrap();
+
+            let structure_shape = StructureShape::builder()
+                .id("example.foo#Structure")
+                .build()
+                .unwrap();
+
+            // All should implement HasShapeId
+            assert_eq!(string_shape.id().name(), "String");
+            assert_eq!(boolean_shape.id().name(), "Boolean");
+            assert_eq!(structure_shape.id().name(), "Structure");
+
+            // All should implement HasTraits
+            assert_eq!(string_shape.traits().len(), 0);
+            assert_eq!(boolean_shape.traits().len(), 0);
+            assert_eq!(structure_shape.traits().len(), 0);
+        }
+    }
+
+    // Shape equality and hash tests
+
+    #[test]
+    fn test_shape_equality() {
+        let shape1 = StringShape::builder()
+            .id("example.foo#MyString")
+            .build()
+            .unwrap();
+
+        let shape2 = StringShape::builder()
+            .id("example.foo#MyString")
+            .build()
+            .unwrap();
+
+        let shape3 = StringShape::builder()
+            .id("example.foo#DifferentString")
+            .build()
+            .unwrap();
+
+        // Same type, ID, and no traits should be equal
+        assert_eq!(shape1, shape2);
+
+        // Different ID should not be equal
+        assert_ne!(shape1, shape3);
+
+        // Test with traits
+        let shape_with_trait = StringShape::builder()
+            .id("example.foo#MyString")
+            .documentation("A test string shape")
+            .build()
+            .unwrap();
+
+        // Same ID but different traits should NOT be equal
+        // This matches the Java implementation's behavior
+        assert_ne!(shape1, shape_with_trait);
+
+        // Verify hash implementation is consistent with equality
+        let mut map = HashMap::new();
+        map.insert(shape1.clone(), "value1");
+        assert!(map.contains_key(&shape2));
+        assert!(!map.contains_key(&shape3));
+        assert!(!map.contains_key(&shape_with_trait));
+
+        // Test with identical traits
+        let shape_with_same_trait = StringShape::builder()
+            .id("example.foo#MyString")
+            .documentation("A test string shape")
+            .build()
+            .unwrap();
+
+        // Same ID and same traits should be equal
+        assert_eq!(shape_with_trait, shape_with_same_trait);
+
+        // Different shape types with same ID should not be equal
+        let bool_shape = BooleanShape::builder()
+            .id("example.foo#MyString") // Same ID as string_shape
+            .build()
+            .unwrap();
+
+        assert_ne!(Shape::from(shape1), Shape::from(bool_shape));
+    }
+
+    // Type checking tests
+
+    #[test]
+    fn test_shape_type_checking() {
+        let string_shape: Shape = StringShape::builder()
+            .id("example.foo#MyString")
+            .build()
+            .unwrap()
+            .into();
+
+        let boolean_shape: Shape = BooleanShape::builder()
+            .id("example.foo#MyBoolean")
+            .build()
+            .unwrap()
+            .into();
+
+        // Test is_* methods
+        assert!(string_shape.is_string());
+        assert!(!string_shape.is_boolean());
+
+        assert!(boolean_shape.is_boolean());
+        assert!(!boolean_shape.is_string());
+
+        // Test as_* methods
+        assert!(string_shape.as_string().is_some());
+        assert!(string_shape.as_boolean().is_none());
+
+        assert!(boolean_shape.as_boolean().is_some());
+        assert!(boolean_shape.as_string().is_none());
+
+        // Test expect_* methods
+        let _ = string_shape.expect_string(); // Should not panic
+        let _ = boolean_shape.expect_boolean(); // Should not panic
+    }
+
+    #[test]
+    #[should_panic(expected = "Expected a boolean shape")]
+    fn test_expect_wrong_type() {
+        let string_shape: Shape = StringShape::builder()
+            .id("example.foo#MyString")
+            .build()
+            .unwrap()
+            .into();
+
+        // This should panic
+        let _ = string_shape.expect_boolean();
+    }
+
+    // Builder pattern tests
+
+    #[test]
+    fn test_builder_pattern() {
+        // Test builder chaining
+        let shape = StringShape::builder()
+            .id("example.foo#MyString")
+            .documentation("A test string shape")
+            .required()
+            .build()
+            .unwrap();
+
+        // Verify all traits were applied
+        assert!(shape.has_trait(ShapeId::from_str("smithy.api#documentation").unwrap()));
+        assert!(shape.has_trait(ShapeId::from_str("smithy.api#required").unwrap()));
+    }
+
+    #[test]
+    fn test_builder_errors() {
+        // Test missing ID
+        let result = StringShape::builder().build();
+        assert!(result.is_err());
+        match result {
+            Err(BuildError::MissingRequiredField { field }) => {
+                assert_eq!(field, "id");
+            }
+            _ => panic!("Expected MissingRequiredField error"),
+        }
+
+        // Test invalid ID
+        let result = StringShape::builder().id("invalid-id").build();
+        assert!(result.is_err());
+        match result {
+            Err(BuildError::InvalidValue { field, .. }) => {
+                assert_eq!(field, "id");
+            }
+            _ => panic!("Expected InvalidValue error"),
+        }
     }
 }

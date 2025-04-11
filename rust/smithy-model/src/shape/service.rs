@@ -16,7 +16,7 @@ use crate::shape_id::ShapeId;
 use crate::traits::Trait;
 
 /// A [service](https://smithy.io/2.0/spec/service-types.html#service) shape
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ServiceShape {
     pub(crate) metadata: ShapeMetadata,
     /// The operations that are part of this service
@@ -111,7 +111,7 @@ impl ServiceShape {
 }
 
 /// An [operation](https://smithy.io/2.0/spec/service-types.html#operation) shape
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct OperationShape {
     pub(crate) metadata: ShapeMetadata,
     /// The input shape ID, if any
@@ -200,7 +200,7 @@ impl OperationShape {
 }
 
 /// A [resource](https://smithy.io/2.0/spec/service-types.html#resource) shape
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ResourceShape {
     pub(crate) metadata: ShapeMetadata,
     /// The identifiers for this resource
@@ -317,6 +317,13 @@ impl ResourceShapeBuilder {
             .ok_or_else(|| required_field_error(field_names::ID))?;
         let id = parse_shape_id(&id_str)?;
 
+        if self.identifiers.is_empty() {
+            return Err(BuildError::InvalidValue {
+                field: field_names::IDENTIFIERS.to_string(),
+                reason: "Resource must have at least one identifier".to_string(),
+            });
+        }
+
         Ok(ResourceShape {
             metadata: ShapeMetadata::new(id, self.traits),
             identifiers: self.identifiers,
@@ -379,5 +386,163 @@ impl From<OperationShape> for Shape {
 impl From<ResourceShape> for Shape {
     fn from(shape: ResourceShape) -> Self {
         Shape::Resource(shape)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::shape::HasShapeId;
+    // Service shape tests
+
+    #[test]
+    fn test_service_shape_construction() {
+        let operation1 = ShapeId::new("example.foo", "GetItem").unwrap();
+        let operation2 = ShapeId::new("example.foo", "PutItem").unwrap();
+        let resource = ShapeId::new("example.foo", "Item").unwrap();
+
+        let shape = ServiceShape::builder()
+            .id("example.foo#MyService")
+            .version("2023-01-01")
+            .operation(operation1.clone())
+            .operation(operation2.clone())
+            .resource(resource.clone())
+            .build()
+            .unwrap();
+
+        assert_eq!(shape.id().to_string(), "example.foo#MyService");
+        assert_eq!(shape.version, Some("2023-01-01".to_string()));
+        assert_eq!(shape.operations.len(), 2);
+        assert_eq!(shape.resources.len(), 1);
+        assert!(shape.operations.contains(&operation1));
+        assert!(shape.operations.contains(&operation2));
+        assert!(shape.resources.contains(&resource));
+    }
+
+    #[test]
+    fn test_service_shape_without_version() {
+        let shape = ServiceShape::builder()
+            .id("example.foo#MyService")
+            .build()
+            .unwrap();
+
+        assert_eq!(shape.id().to_string(), "example.foo#MyService");
+        assert_eq!(shape.version, None);
+        assert_eq!(shape.operations.len(), 0);
+        assert_eq!(shape.resources.len(), 0);
+    }
+
+    // Operation shape tests
+
+    #[test]
+    fn test_operation_shape_construction() {
+        let input = ShapeId::new("example.foo", "MyInput").unwrap();
+        let output = ShapeId::new("example.foo", "MyOutput").unwrap();
+        let error1 = ShapeId::new("example.foo", "Error1").unwrap();
+        let error2 = ShapeId::new("example.foo", "Error2").unwrap();
+
+        let shape = OperationShape::builder()
+            .id("example.foo#MyOperation")
+            .input(input.clone())
+            .output(output.clone())
+            .error(error1.clone())
+            .error(error2.clone())
+            .build()
+            .unwrap();
+
+        assert_eq!(shape.id().to_string(), "example.foo#MyOperation");
+        assert_eq!(shape.input, Some(input));
+        assert_eq!(shape.output, Some(output));
+        assert_eq!(shape.errors.len(), 2);
+        assert!(shape.errors.contains(&error1));
+        assert!(shape.errors.contains(&error2));
+    }
+
+    #[test]
+    fn test_operation_shape_without_io() {
+        let shape = OperationShape::builder()
+            .id("example.foo#MyOperation")
+            .build()
+            .unwrap();
+
+        assert_eq!(shape.id().to_string(), "example.foo#MyOperation");
+        assert_eq!(shape.input, None);
+        assert_eq!(shape.output, None);
+        assert_eq!(shape.errors.len(), 0);
+    }
+
+    // Resource shape tests
+
+    #[test]
+    fn test_resource_shape_construction() {
+        let identifier = ShapeId::new("example.foo", "ItemId").unwrap();
+        let create = ShapeId::new("example.foo", "CreateItem").unwrap();
+        let read = ShapeId::new("example.foo", "GetItem").unwrap();
+        let update = ShapeId::new("example.foo", "UpdateItem").unwrap();
+        let delete = ShapeId::new("example.foo", "DeleteItem").unwrap();
+        let list = ShapeId::new("example.foo", "ListItems").unwrap();
+        let child_resource = ShapeId::new("example.foo", "ItemPart").unwrap();
+        let collection_operation = ShapeId::new("example.foo", "BatchGetItems").unwrap();
+
+        let shape = ResourceShape::builder()
+            .id("example.foo#Item")
+            .identifier("itemId", identifier.clone())
+            .create(create.clone())
+            .read(read.clone())
+            .update(update.clone())
+            .delete(delete.clone())
+            .list(list.clone())
+            .resource(child_resource.clone())
+            .operation(collection_operation.clone())
+            .build()
+            .unwrap();
+
+        assert_eq!(shape.id().to_string(), "example.foo#Item");
+        assert_eq!(shape.identifiers.len(), 1);
+        assert_eq!(shape.identifiers.get("itemId"), Some(&identifier));
+        assert_eq!(shape.create, Some(create));
+        assert_eq!(shape.read, Some(read));
+        assert_eq!(shape.update, Some(update));
+        assert_eq!(shape.delete, Some(delete));
+        assert_eq!(shape.list, Some(list));
+        assert_eq!(shape.resources.len(), 1);
+        assert!(shape.resources.contains(&child_resource));
+        assert_eq!(shape.operations.len(), 1);
+        assert!(shape.operations.contains(&collection_operation));
+    }
+
+    #[test]
+    fn test_resource_shape_minimal() {
+        let identifier = ShapeId::new("example.foo", "ItemId").unwrap();
+
+        let shape = ResourceShape::builder()
+            .id("example.foo#Item")
+            .identifier("itemId", identifier.clone())
+            .build()
+            .unwrap();
+
+        assert_eq!(shape.id().to_string(), "example.foo#Item");
+        assert_eq!(shape.identifiers.len(), 1);
+        assert_eq!(shape.create, None);
+        assert_eq!(shape.read, None);
+        assert_eq!(shape.update, None);
+        assert_eq!(shape.delete, None);
+        assert_eq!(shape.list, None);
+        assert_eq!(shape.resources.len(), 0);
+        assert_eq!(shape.operations.len(), 0);
+    }
+
+    #[test]
+    fn test_resource_shape_missing_identifiers() {
+        let result = ResourceShape::builder().id("example.foo#Item").build();
+
+        assert!(result.is_err());
+        match result {
+            Err(BuildError::InvalidValue { field, reason }) => {
+                assert_eq!(field, "identifiers");
+                assert_eq!(reason, "Resource must have at least one identifier");
+            }
+            _ => panic!("Expected InvalidValue error"),
+        }
     }
 }

@@ -15,7 +15,7 @@ use crate::traits::Trait;
 use std::collections::HashMap;
 
 /// A [list](https://smithy.io/2.0/spec/aggregate-types.html#list) shape
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ListShape {
     pub(crate) metadata: ShapeMetadata,
     /// The member shape that defines the type of elements in the list
@@ -84,10 +84,19 @@ impl ListShape {
     pub fn member(&self) -> &MemberShape {
         &self.member
     }
+
+    /// Convert this shape back into a builder
+    pub fn to_builder(self) -> ListShapeBuilder {
+        ListShapeBuilder {
+            id: Some(self.metadata.id.to_string()),
+            traits: self.metadata.traits,
+            member: Some(self.member),
+        }
+    }
 }
 
 /// A [map](https://smithy.io/2.0/spec/aggregate-types.html#map) shape
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct MapShape {
     pub(crate) metadata: ShapeMetadata,
     /// The key member shape
@@ -174,10 +183,20 @@ impl MapShape {
     pub fn key(&self) -> &MemberShape {
         &self.key
     }
+
+    /// Convert this shape back into a builder
+    pub fn to_builder(self) -> MapShapeBuilder {
+        MapShapeBuilder {
+            id: Some(self.metadata.id.to_string()),
+            traits: self.metadata.traits,
+            key: Some(self.key),
+            value: Some(self.value),
+        }
+    }
 }
 
 /// A [set](https://smithy.io/2.0/spec/aggregate-types.html#set) shape
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct SetShape {
     pub(crate) metadata: ShapeMetadata,
     /// The member shape that defines the type of elements in the set
@@ -246,10 +265,19 @@ impl SetShape {
     pub fn member(&self) -> &MemberShape {
         &self.member
     }
+
+    /// Convert this shape back into a builder
+    pub fn to_builder(self) -> SetShapeBuilder {
+        SetShapeBuilder {
+            id: Some(self.metadata.id.to_string()),
+            traits: self.metadata.traits,
+            member: Some(self.member),
+        }
+    }
 }
 
 /// A [structure](https://smithy.io/2.0/spec/aggregate-types.html#structure) shape
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct StructureShape {
     pub(crate) metadata: ShapeMetadata,
     /// The members of the structure, keyed by member name
@@ -277,8 +305,20 @@ impl StructureShapeBuilder {
     }
 
     /// Add a member to the structure shape.
-    pub fn member(mut self, name: impl Into<String>, member: MemberShape) -> Self {
-        self.members.insert(name.into(), member);
+    pub fn member(mut self, member: MemberShape) -> Self {
+        self.members.insert(member.member_name.clone(), member);
+        self
+    }
+
+    /// Remove a member by name from the structure shape (if it exists)
+    pub fn remove_member(mut self, member_name: impl AsRef<str>) -> Self {
+        self.members.remove(member_name.as_ref());
+        self
+    }
+
+    /// Remove all members from the structure shape
+    pub fn clear_members(mut self) -> Self {
+        self.members.clear();
         self
     }
 
@@ -314,10 +354,19 @@ impl StructureShape {
     pub fn members(&self) -> &HashMap<String, MemberShape> {
         &self.members
     }
+
+    /// Convert this shape back into a builder
+    pub fn to_builder(self) -> StructureShapeBuilder {
+        StructureShapeBuilder {
+            id: Some(self.metadata.id.to_string()),
+            traits: self.metadata.traits,
+            members: self.members,
+        }
+    }
 }
 
 /// A [union](https://smithy.io/2.0/spec/aggregate-types.html#union) shape
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct UnionShape {
     pub(crate) metadata: ShapeMetadata,
     /// The members of the union, keyed by member name
@@ -345,8 +394,8 @@ impl UnionShapeBuilder {
     }
 
     /// Add a member to the union shape.
-    pub fn member(mut self, name: impl Into<String>, member: MemberShape) -> Self {
-        self.members.insert(name.into(), member);
+    pub fn member(mut self, member: MemberShape) -> Self {
+        self.members.insert(member.member_name.clone(), member);
         self
     }
 
@@ -381,6 +430,15 @@ impl UnionShape {
     /// Returns all member shapes for this union
     pub fn members(&self) -> &HashMap<String, MemberShape> {
         &self.members
+    }
+
+    /// Convert this shape back into a builder
+    pub fn to_builder(self) -> UnionShapeBuilder {
+        UnionShapeBuilder {
+            id: Some(self.metadata.id.to_string()),
+            traits: self.metadata.traits,
+            members: self.members,
+        }
     }
 }
 
@@ -443,5 +501,223 @@ impl From<StructureShape> for Shape {
 impl From<UnionShape> for Shape {
     fn from(shape: UnionShape) -> Self {
         Shape::Union(shape)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::shape::HasShapeId;
+    // List shape tests
+
+    #[test]
+    fn test_list_shape_construction() {
+        let target = ShapeId::new("smithy.api", "String").unwrap();
+        let member = MemberShape::builder()
+            .id("example.foo#MyList$member")
+            .member_name("member")
+            .target(target)
+            .build()
+            .unwrap();
+
+        let shape = ListShape::builder()
+            .id("example.foo#MyList")
+            .member(member.clone())
+            .build()
+            .unwrap();
+
+        assert_eq!(shape.id().to_string(), "example.foo#MyList");
+        assert_eq!(shape.member.id().to_string(), "example.foo#MyList$member");
+        assert_eq!(shape.member.target.to_string(), "smithy.api#String");
+    }
+
+    #[test]
+    fn test_list_shape_missing_member() {
+        let result = ListShape::builder().id("example.foo#MyList").build();
+
+        assert!(result.is_err());
+        match result {
+            Err(BuildError::MissingRequiredField { field }) => {
+                assert_eq!(field, "member");
+            }
+            _ => panic!("Expected MissingRequiredField error"),
+        }
+    }
+
+    // Map shape tests
+
+    #[test]
+    fn test_map_shape_construction() {
+        let key_target = ShapeId::new("smithy.api", "String").unwrap();
+        let value_target = ShapeId::new("smithy.api", "Integer").unwrap();
+
+        let key = MemberShape::builder()
+            .id("example.foo#MyMap$key")
+            .member_name("key")
+            .target(key_target)
+            .build()
+            .unwrap();
+
+        let value = MemberShape::builder()
+            .id("example.foo#MyMap$value")
+            .member_name("value")
+            .target(value_target)
+            .build()
+            .unwrap();
+
+        let shape = MapShape::builder()
+            .id("example.foo#MyMap")
+            .key(key.clone())
+            .value(value.clone())
+            .build()
+            .unwrap();
+
+        assert_eq!(shape.id().to_string(), "example.foo#MyMap");
+        assert_eq!(shape.key.id().to_string(), "example.foo#MyMap$key");
+        assert_eq!(shape.value.id().to_string(), "example.foo#MyMap$value");
+        assert_eq!(shape.key.target.to_string(), "smithy.api#String");
+        assert_eq!(shape.value.target.to_string(), "smithy.api#Integer");
+    }
+
+    // Set shape tests
+
+    #[test]
+    fn test_set_shape_construction() {
+        let target = ShapeId::new("smithy.api", "String").unwrap();
+        let member = MemberShape::builder()
+            .id("example.foo#MySet$member")
+            .member_name("member")
+            .target(target)
+            .build()
+            .unwrap();
+
+        let shape = SetShape::builder()
+            .id("example.foo#MySet")
+            .member(member.clone())
+            .build()
+            .unwrap();
+
+        assert_eq!(shape.id().to_string(), "example.foo#MySet");
+        assert_eq!(shape.member.id().to_string(), "example.foo#MySet$member");
+        assert_eq!(shape.member.target.to_string(), "smithy.api#String");
+    }
+
+    // Structure shape tests
+
+    #[test]
+    fn test_structure_shape_construction() {
+        let string_target = ShapeId::new("smithy.api", "String").unwrap();
+        let int_target = ShapeId::new("smithy.api", "Integer").unwrap();
+
+        let name_member = MemberShape::builder()
+            .id("example.foo#MyStruct$name")
+            .member_name("name")
+            .target(string_target)
+            .build()
+            .unwrap();
+
+        let age_member = MemberShape::builder()
+            .id("example.foo#MyStruct$age")
+            .member_name("age")
+            .target(int_target)
+            .build()
+            .unwrap();
+
+        let shape = StructureShape::builder()
+            .id("example.foo#MyStruct")
+            .member(name_member.clone())
+            .member(age_member.clone())
+            .build()
+            .unwrap();
+
+        assert_eq!(shape.id().to_string(), "example.foo#MyStruct");
+        assert_eq!(shape.members().len(), 2);
+        let members = &shape.members;
+        assert!(members.get("name").is_some());
+        assert!(members.get("age").is_some());
+        assert_eq!(
+            members.get("name").unwrap().target.to_string(),
+            "smithy.api#String"
+        );
+        assert_eq!(
+            members.get("age").unwrap().target.to_string(),
+            "smithy.api#Integer"
+        );
+    }
+
+    #[test]
+    fn test_structure_shape_member_management() {
+        let string_target = ShapeId::new("smithy.api", "String").unwrap();
+        let int_target = ShapeId::new("smithy.api", "Integer").unwrap();
+
+        let name_member = MemberShape::builder()
+            .id("example.foo#MyStruct$name")
+            .member_name("name")
+            .target(string_target)
+            .build()
+            .unwrap();
+
+        let age_member = MemberShape::builder()
+            .id("example.foo#MyStruct$age")
+            .member_name("age")
+            .target(int_target)
+            .build()
+            .unwrap();
+
+        // Add members
+        let shape = StructureShape::builder()
+            .id("example.foo#MyStruct")
+            .member(name_member.clone())
+            .member(age_member.clone())
+            .build()
+            .unwrap();
+
+        assert_eq!(shape.members().len(), 2);
+
+        // Remove a member
+        let shape = shape.to_builder().remove_member("age").build().unwrap();
+
+        assert_eq!(shape.members().len(), 1);
+        assert!(shape.members.contains_key("name"));
+        assert!(!shape.members.contains_key("age"));
+
+        // Clear members
+        let shape = shape.to_builder().clear_members().build().unwrap();
+
+        assert_eq!(shape.members().len(), 0);
+    }
+
+    // Union shape tests
+
+    #[test]
+    fn test_union_shape_construction() {
+        let string_target = ShapeId::new("smithy.api", "String").unwrap();
+        let int_target = ShapeId::new("smithy.api", "Integer").unwrap();
+
+        let string_member = MemberShape::builder()
+            .id("example.foo#MyUnion$stringValue")
+            .member_name("stringValue")
+            .target(string_target)
+            .build()
+            .unwrap();
+
+        let int_member = MemberShape::builder()
+            .id("example.foo#MyUnion$intValue")
+            .member_name("intValue")
+            .target(int_target)
+            .build()
+            .unwrap();
+
+        let shape = UnionShape::builder()
+            .id("example.foo#MyUnion")
+            .member(string_member.clone())
+            .member(int_member.clone())
+            .build()
+            .unwrap();
+
+        assert_eq!(shape.id().to_string(), "example.foo#MyUnion");
+        assert_eq!(shape.members().len(), 2);
+        assert!(shape.members.contains_key("stringValue"));
+        assert!(shape.members.contains_key("intValue"));
     }
 }

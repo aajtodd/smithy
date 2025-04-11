@@ -24,6 +24,8 @@ pub(crate) mod field_names {
     pub(crate) const VALUE: &str = "value";
     /// Member field name
     pub(crate) const MEMBER: &str = "member";
+    /// identifiers field name
+    pub(crate) const IDENTIFIERS: &str = "identifiers";
 }
 
 /// Helper functions for common builder operations
