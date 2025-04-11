@@ -10,8 +10,7 @@ use crate::shape::{
     error::BuildError,
     MemberShape, ProvideShapeMetadata, Shape, ShapeMetadata,
 };
-use crate::shape_id::ShapeId;
-use crate::traits::Trait;
+use crate::traits::TraitMap;
 use std::collections::HashMap;
 
 /// A [list](https://smithy.io/2.0/spec/aggregate-types.html#list) shape
@@ -26,7 +25,7 @@ pub struct ListShape {
 #[derive(Debug, Default)]
 pub struct ListShapeBuilder {
     id: Option<String>,
-    traits: HashMap<ShapeId, Trait>,
+    traits: TraitMap,
     member: Option<MemberShape>,
 }
 
@@ -69,7 +68,7 @@ impl ListShapeBuilder {
 }
 
 impl ProvideTraitsMut for ListShapeBuilder {
-    fn traits_mut(&mut self) -> &mut HashMap<ShapeId, Trait> {
+    fn traits_mut(&mut self) -> &mut TraitMap {
         &mut self.traits
     }
 }
@@ -109,7 +108,7 @@ pub struct MapShape {
 #[derive(Debug, Default)]
 pub struct MapShapeBuilder {
     id: Option<String>,
-    traits: HashMap<ShapeId, Trait>,
+    traits: TraitMap,
     key: Option<MemberShape>,
     value: Option<MemberShape>,
 }
@@ -163,7 +162,7 @@ impl MapShapeBuilder {
 }
 
 impl ProvideTraitsMut for MapShapeBuilder {
-    fn traits_mut(&mut self) -> &mut HashMap<ShapeId, Trait> {
+    fn traits_mut(&mut self) -> &mut TraitMap {
         &mut self.traits
     }
 }
@@ -207,7 +206,7 @@ pub struct SetShape {
 #[derive(Debug, Default)]
 pub struct SetShapeBuilder {
     id: Option<String>,
-    traits: HashMap<ShapeId, Trait>,
+    traits: TraitMap,
     member: Option<MemberShape>,
 }
 
@@ -250,7 +249,7 @@ impl SetShapeBuilder {
 }
 
 impl ProvideTraitsMut for SetShapeBuilder {
-    fn traits_mut(&mut self) -> &mut HashMap<ShapeId, Trait> {
+    fn traits_mut(&mut self) -> &mut TraitMap {
         &mut self.traits
     }
 }
@@ -288,7 +287,7 @@ pub struct StructureShape {
 #[derive(Debug, Default)]
 pub struct StructureShapeBuilder {
     id: Option<String>,
-    traits: HashMap<ShapeId, Trait>,
+    traits: TraitMap,
     members: HashMap<String, MemberShape>,
 }
 
@@ -339,7 +338,7 @@ impl StructureShapeBuilder {
 }
 
 impl ProvideTraitsMut for StructureShapeBuilder {
-    fn traits_mut(&mut self) -> &mut HashMap<ShapeId, Trait> {
+    fn traits_mut(&mut self) -> &mut TraitMap {
         &mut self.traits
     }
 }
@@ -377,7 +376,7 @@ pub struct UnionShape {
 #[derive(Debug, Default)]
 pub struct UnionShapeBuilder {
     id: Option<String>,
-    traits: HashMap<ShapeId, Trait>,
+    traits: TraitMap,
     members: HashMap<String, MemberShape>,
 }
 
@@ -416,7 +415,7 @@ impl UnionShapeBuilder {
 }
 
 impl ProvideTraitsMut for UnionShapeBuilder {
-    fn traits_mut(&mut self) -> &mut HashMap<ShapeId, Trait> {
+    fn traits_mut(&mut self) -> &mut TraitMap {
         &mut self.traits
     }
 }
@@ -508,6 +507,7 @@ impl From<UnionShape> for Shape {
 mod tests {
     use super::*;
     use crate::shape::HasShapeId;
+    use crate::ShapeId;
     // List shape tests
 
     #[test]

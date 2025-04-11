@@ -1,5 +1,7 @@
 # Implementation Plan
 
+* Remember to use our workflow instructions to complete tasks.
+
 ## Current Focus: Trait Implementation
 
 Reference the design in [trait design](trait-design.md)
@@ -19,6 +21,9 @@ Reference the design in [trait design](trait-design.md)
 - [ ] Create unit tests for the trait interface
 
 ### Task 2: Basic Trait Implementations
+
+NOTE: implementations of "built in" (traits defined in the `smithy.api` namespace) will live under the
+`traits` module. e.g. the `Documentation` trait would be defined in `traits/documentation.rs`
 
 - [ ] Implement `Documentation` trait
     - [ ] Define the struct and implement `Trait`
@@ -47,7 +52,7 @@ Reference the design in [trait design](trait-design.md)
 
 ### Task 3: Trait Registry
 
-- [ ] Implement the `TraitRegistry` struct
+- [ ] Implement the `TraitRegistry` struct in `traits/registry.rs`
     - [ ] Define the struct with creators map
     - [ ] Implement constructor with built-in traits
 - [ ] Add methods for registering trait types
@@ -63,49 +68,10 @@ Reference the design in [trait design](trait-design.md)
     - [ ] Test fallback to dynamic traits
     - [ ] Test error handling
 
-### Task 4: Shape Integration
 
-- [ ] Update the `Shape` struct to store traits
-    - [ ] Add `traits` field to `Shape`
-    - [ ] Update constructors to initialize empty traits map
-    - [ ] Update clone and debug implementations
-- [ ] Add methods for checking traits
-    - [ ] Implement `has_trait()` for ID-based checks
-    - [ ] Implement `has_trait_type()` for type-based checks
-- [ ] Add methods for getting traits
-    - [ ] Implement `get_trait_by_id()` for ID-based access
-    - [ ] Implement `get_trait()` for type-safe access
-    - [ ] Implement `expect_trait()` for panicking access
-- [ ] Add methods for adding traits
-    - [ ] Implement `with_trait()` builder method
-    - [ ] Update any existing methods that work with traits
-- [ ] Write unit tests for trait integration
-    - [ ] Test adding traits to shapes
-    - [ ] Test retrieving traits by ID
-    - [ ] Test retrieving traits by type
-    - [ ] Test error handling and edge cases
+### Task 4: Additional Trait Implementations
 
-### Task 5: Serialization/Deserialization
-
-- [ ] Update model loading to handle traits
-    - [ ] Modify `parse_shape()` to extract traits from JSON
-    - [ ] Use the trait registry to create traits
-    - [ ] Handle trait serialization during model saving
-- [ ] Implement JSON AST serialization
-    - [ ] Add trait serialization to shape serialization
-    - [ ] Format trait IDs with $ prefix in JSON
-- [ ] Implement JSON AST deserialization
-    - [ ] Parse trait fields (prefixed with $) from JSON
-    - [ ] Create appropriate trait objects
-- [ ] Write unit tests for serialization/deserialization
-    - [ ] Test serialization of shapes with traits
-    - [ ] Test deserialization of shapes with traits
-    - [ ] Test round-trip serialization/deserialization
-    - [ ] Test handling of unknown traits
-
-### Task 6: Additional Trait Implementations
-
-- [ ] Implement common Smithy traits
+- [ ] Implement common Smithy traits from the `smithy.api` namespace from the Smithy specification
     - [ ] `Sensitive` trait
     - [ ] `Pattern` trait
     - [ ] `Length` trait
@@ -117,7 +83,7 @@ Reference the design in [trait design](trait-design.md)
     - [ ] Test validation logic if applicable
 - [ ] Update trait registry to include all implemented traits
 
-### Task 7: Documentation and Examples
+### Task 5: Documentation and Examples
 
 - [ ] Document the trait system
     - [ ] Add detailed comments to all types and methods
@@ -143,6 +109,7 @@ We will implement the trait system in the following order:
 6. Implement serialization/deserialization
 7. Add more trait implementations
 8. Add tests and documentation
+9. Replace existing occurrences of "manually constructed" `documentation` and `required` traits with the new actual definitions 
 
 This approach allows us to build and test incrementally, ensuring each component works before moving on to the next.
 
@@ -158,6 +125,7 @@ This approach allows us to build and test incrementally, ensuring each component
 
 After completing the trait implementation, we will move on to:
 
-1. Model validation
-2. Selector implementation
-3. Code generation framework
+1. Designing the model (container) APIs
+2. Model validation
+3. Selector implementation
+4. Code generation framework

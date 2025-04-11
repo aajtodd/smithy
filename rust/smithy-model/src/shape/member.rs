@@ -2,9 +2,8 @@ use crate::shape::{
     field_names, parse_shape_id, required_field_error, ProvideShapeMetadata, ProvideTraitsMut,
     Shape, ShapeMetadata,
 };
-use crate::traits::Trait;
+use crate::traits::TraitMap;
 use crate::{shape, ShapeId};
-use std::collections::HashMap;
 
 /// A [member](https://smithy.io/2.0/spec/model.html#member-shapes) shape
 #[derive(Debug, Clone, PartialEq)]
@@ -20,7 +19,7 @@ pub struct MemberShape {
 #[derive(Debug, Default)]
 pub struct MemberShapeBuilder {
     id: Option<String>,
-    traits: HashMap<ShapeId, Trait>,
+    traits: TraitMap,
     member_name: Option<String>,
     target: Option<ShapeId>,
 }
@@ -73,7 +72,7 @@ impl MemberShapeBuilder {
 }
 
 impl ProvideTraitsMut for MemberShapeBuilder {
-    fn traits_mut(&mut self) -> &mut HashMap<ShapeId, Trait> {
+    fn traits_mut(&mut self) -> &mut TraitMap {
         &mut self.traits
     }
 }

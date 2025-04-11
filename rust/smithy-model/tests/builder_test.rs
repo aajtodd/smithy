@@ -8,6 +8,7 @@ use smithy_model::shape::{BlobShape, StringShape};
 use smithy_model::shape::{HasShapeId, HasTraits};
 use smithy_model::shape::{ListShape, MapShape, StructureShape};
 use smithy_model::shape_id::ShapeId;
+use smithy_model::traits::DynamicTrait;
 
 #[test]
 fn test_string_shape_builder() {
@@ -200,7 +201,7 @@ fn test_invalid_id() {
 #[test]
 fn test_with_custom_trait() {
     let trait_id = ShapeId::new("example.foo", "customTrait").unwrap();
-    let custom_trait = smithy_model::traits::Trait::new(trait_id.clone());
+    let custom_trait = DynamicTrait::new(trait_id.clone(), None);
 
     let shape = StringShape::builder()
         .id("example.foo#MyString")

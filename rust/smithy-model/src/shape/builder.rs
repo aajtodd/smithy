@@ -5,12 +5,11 @@
 
 //! Builder traits for creating Smithy shapes.
 
-use std::collections::HashMap;
 use std::str::FromStr;
 
 use crate::shape::error::BuildError;
 use crate::shape_id::ShapeId;
-use crate::traits::Trait;
+use crate::traits::{Documentation, Required, Trait, TraitMap};
 
 /// Common field names used in builders
 pub(crate) mod field_names {
@@ -46,7 +45,7 @@ pub(crate) fn parse_shape_id(id_str: &str) -> Result<ShapeId, BuildError> {
 /// Trait for accessing the traits container.
 pub trait ProvideTraitsMut {
     /// Get mutable access to the traits container.
-    fn traits_mut(&mut self) -> &mut HashMap<ShapeId, Trait>;
+    fn traits_mut(&mut self) -> &mut TraitMap;
 }
 
 /// Extension trait for shape builders with common trait methods.
@@ -60,6 +59,7 @@ pub trait ShapeBuilderExt: ProvideTraitsMut + Sized {
     /// use smithy_model::shape::{HasShapeId, HasTraits};
     /// use smithy_model::shape::ShapeBuilderExt;
     /// use smithy_model::shape_id::ShapeId;
+    /// use smithy_model::traits::{Documentation, Trait};
     ///
     /// let shape = StringShape::builder()
     ///     .id("example.foo#MyString")
@@ -67,14 +67,10 @@ pub trait ShapeBuilderExt: ProvideTraitsMut + Sized {
     ///     .build()
     ///     .unwrap();
     ///
-    /// assert!(shape.has_trait(ShapeId::new("smithy.api", "documentation").unwrap()));
+    /// assert!(shape.has_trait(Documentation::static_id()));
     /// ```
-    fn documentation(mut self, doc: impl Into<String>) -> Self {
-        let _doc_string = doc.into();
-        let trait_id = ShapeId::new("smithy.api", "documentation").unwrap();
-        let trait_value = Trait::new(trait_id.clone());
-        self.traits_mut().insert(trait_id, trait_value);
-        self
+    fn documentation(self, doc: impl Into<String>) -> Self {
+        self.with_trait(Documentation(doc.into()))
     }
 
     /// Mark the shape as required.
@@ -86,6 +82,7 @@ pub trait ShapeBuilderExt: ProvideTraitsMut + Sized {
     /// use smithy_model::shape::{HasShapeId, HasTraits};
     /// use smithy_model::shape::ShapeBuilderExt;
     /// use smithy_model::shape_id::ShapeId;
+    /// use smithy_model::traits::{Required, Trait};
     ///
     /// let shape = StringShape::builder()
     ///     .id("example.foo#MyString")
@@ -93,13 +90,10 @@ pub trait ShapeBuilderExt: ProvideTraitsMut + Sized {
     ///     .build()
     ///     .unwrap();
     ///
-    /// assert!(shape.has_trait(ShapeId::new("smithy.api", "required").unwrap()));
+    /// assert!(shape.has_trait(Required::static_id()));
     /// ```
-    fn required(mut self) -> Self {
-        let trait_id = ShapeId::new("smithy.api", "required").unwrap();
-        let trait_value = Trait::new(trait_id.clone());
-        self.traits_mut().insert(trait_id, trait_value);
-        self
+    fn required(self) -> Self {
+        self.with_trait(Required)
     }
 
     /// Add a Smithy trait to the shape.
@@ -111,10 +105,10 @@ pub trait ShapeBuilderExt: ProvideTraitsMut + Sized {
     /// use smithy_model::shape::{HasShapeId, HasTraits};
     /// use smithy_model::shape::ShapeBuilderExt;
     /// use smithy_model::shape_id::ShapeId;
-    /// use smithy_model::traits::Trait;
+    /// use smithy_model::traits::{DynamicTrait, Trait};
     ///
     /// let trait_id = ShapeId::new("example.foo", "customTrait").unwrap();
-    /// let custom_trait = Trait::new(trait_id.clone());
+    /// let custom_trait = DynamicTrait::new(trait_id.clone(), None);
     ///
     /// let shape = StringShape::builder()
     ///     .id("example.foo#MyString")
@@ -124,9 +118,8 @@ pub trait ShapeBuilderExt: ProvideTraitsMut + Sized {
     ///
     /// assert!(shape.has_trait(trait_id));
     /// ```
-    fn with_trait(mut self, trait_value: Trait) -> Self {
-        self.traits_mut()
-            .insert(trait_value.id().clone(), trait_value);
+    fn with_trait(mut self, strait: impl Trait) -> Self {
+        self.traits_mut().insert(Box::new(strait));
         self
     }
 }

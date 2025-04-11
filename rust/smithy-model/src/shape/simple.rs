@@ -10,8 +10,7 @@ use crate::shape::{
     error::BuildError,
     MemberShape, ProvideShapeMetadata, Shape, ShapeMetadata,
 };
-use crate::shape_id::ShapeId;
-use crate::traits::Trait;
+use crate::traits::TraitMap;
 use paste::paste;
 use std::collections::HashMap;
 use std::hash::Hash;
@@ -34,7 +33,7 @@ macro_rules! define_simple_shape {
             #[derive(Debug, Default)]
             pub struct [<$shape_name Builder>] {
                 id: Option<String>,
-                traits: HashMap<ShapeId, Trait>,
+                traits: TraitMap,
             }
 
             impl [<$shape_name Builder>] {
@@ -63,7 +62,7 @@ macro_rules! define_simple_shape {
             }
 
             impl ProvideTraitsMut for [<$shape_name Builder>] {
-                fn traits_mut(&mut self) -> &mut HashMap<ShapeId, Trait> {
+                fn traits_mut(&mut self) -> &mut TraitMap {
                     &mut self.traits
                 }
             }
@@ -195,7 +194,7 @@ pub struct EnumShape {
 #[derive(Debug, Default)]
 pub struct EnumShapeBuilder {
     id: Option<String>,
-    traits: HashMap<ShapeId, Trait>,
+    traits: TraitMap,
     members: HashMap<String, MemberShape>,
 }
 
@@ -253,7 +252,7 @@ impl EnumShapeBuilder {
 }
 
 impl ProvideTraitsMut for EnumShapeBuilder {
-    fn traits_mut(&mut self) -> &mut HashMap<ShapeId, Trait> {
+    fn traits_mut(&mut self) -> &mut TraitMap {
         &mut self.traits
     }
 }
@@ -300,7 +299,7 @@ pub struct IntEnumShape {
 #[derive(Debug, Default)]
 pub struct IntEnumShapeBuilder {
     id: Option<String>,
-    traits: HashMap<ShapeId, Trait>,
+    traits: TraitMap,
     members: HashMap<String, MemberShape>,
     values: HashMap<String, i64>,
 }
@@ -367,7 +366,7 @@ impl IntEnumShapeBuilder {
 }
 
 impl ProvideTraitsMut for IntEnumShapeBuilder {
-    fn traits_mut(&mut self) -> &mut HashMap<ShapeId, Trait> {
+    fn traits_mut(&mut self) -> &mut TraitMap {
         &mut self.traits
     }
 }
@@ -403,11 +402,12 @@ impl From<IntEnumShape> for Shape {
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
     // Simple shape tests
     use super::*;
     use crate::shape::builder::ShapeBuilderExt;
     use crate::shape::{HasShapeId, HasTraits};
+    use crate::ShapeId;
+    use std::str::FromStr;
 
     #[test]
     fn test_string_shape_construction() {

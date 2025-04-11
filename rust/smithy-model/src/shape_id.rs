@@ -187,6 +187,23 @@ impl ShapeId {
         try_from_parts(namespace, name, None::<String>)
     }
 
+    /// Creates a new ShapeId from a static string panicking if the ID is invalid.
+    #[doc(hidden)]
+    pub fn new_unchecked(id: &'static str) -> ShapeId {
+        let (namespace, name) = id.split_once('#').unwrap();
+        let (name, member) = if let Some((name, member)) = name.split_once('$') {
+            (name, Some(member))
+        } else {
+            (name, None)
+        };
+
+        ShapeId {
+            namespace: namespace.into(),
+            name: name.into(),
+            member: member.map(|m| m.into()),
+        }
+    }
+
     /// Creates a new ShapeId with a member.
     ///
     /// # Arguments

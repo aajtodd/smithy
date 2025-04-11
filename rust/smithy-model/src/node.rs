@@ -584,6 +584,7 @@ impl fmt::Display for Number {
         write!(f, "{}", self.inner)
     }
 }
+
 impl From<i8> for Number {
     fn from(n: i8) -> Self {
         Number {

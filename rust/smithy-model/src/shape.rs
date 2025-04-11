@@ -5,7 +5,6 @@
 
 //! Shape types for the Smithy model.
 
-use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 
 mod aggregate;
@@ -17,7 +16,7 @@ mod simple;
 mod type_checks;
 
 use crate::shape_id::ShapeId;
-use crate::traits::Trait;
+use crate::traits::{BoxTrait, Trait, TraitMap};
 
 pub use self::aggregate::*;
 pub use self::builder::*;
@@ -145,9 +144,9 @@ pub trait HasShapeId {
 }
 
 /// Common trait for all shape types providing access to traits
-pub trait HasTraits {
+pub trait HasTraits: HasShapeId {
     /// Get all traits applied to this shape
-    fn traits(&self) -> &HashMap<ShapeId, Trait>;
+    fn traits(&self) -> &TraitMap;
 
     /// Check if this shape has a specific trait
     fn has_trait(&self, trait_id: impl AsRef<ShapeId>) -> bool {
@@ -155,27 +154,26 @@ pub trait HasTraits {
     }
 
     /// Get a specific trait by ID
-    fn get_trait(&self, trait_id: impl AsRef<ShapeId>) -> Option<&Trait> {
+    fn get_trait(&self, trait_id: impl AsRef<ShapeId>) -> Option<&BoxTrait> {
         self.traits().get(trait_id.as_ref())
     }
 
-    // FIXME - uncomment and revisit after the updated trait design is available
-    // /// Get a specific trait with a concrete type
-    // fn get_trait_as<T: Trait + 'static>(&self) -> Option<&T> {
-    //     self.get_trait(T::static_id())
-    //         .and_then(|t| t.as_any().downcast_ref::<T>())
-    // }
-    //
-    // /// Get a specific trait with a concrete type, panicking if not found or wrong type
-    // fn expect_trait<T: Trait + 'static>(&self) -> &T {
-    //     self.get_trait_as::<T>().unwrap_or_else(|| {
-    //         panic!(
-    //             "Expected trait {} on shape {}, but it was not found or had the wrong type",
-    //             T::static_id(),
-    //             self.id()
-    //         )
-    //     })
-    // }
+    /// Get a specific trait with a concrete type
+    fn get_trait_as<T: Trait + 'static>(&self) -> Option<&T> {
+        self.get_trait(T::static_id())
+            .and_then(|t| t.as_any().downcast_ref::<T>())
+    }
+
+    /// Get a specific trait with a concrete type, panicking if not found or wrong type
+    fn expect_trait<T: Trait + 'static>(&self) -> &T {
+        self.get_trait_as::<T>().unwrap_or_else(|| {
+            panic!(
+                "Expected trait {} on shape {}, but it was not found or had the wrong type",
+                T::static_id(),
+                self.id()
+            )
+        })
+    }
 }
 
 /// Private trait for accessing shape metadata
@@ -190,12 +188,12 @@ pub(crate) struct ShapeMetadata {
     /// The shape ID
     id: ShapeId,
     /// Traits applied to this shape
-    traits: HashMap<ShapeId, Trait>,
+    traits: TraitMap,
 }
 
 impl ShapeMetadata {
     /// Create new shape metadata
-    pub(crate) fn new(id: ShapeId, traits: HashMap<ShapeId, Trait>) -> Self {
+    pub(crate) fn new(id: ShapeId, traits: TraitMap) -> Self {
         Self { id, traits }
     }
 }
@@ -208,7 +206,7 @@ impl<T: ProvideShapeMetadata> HasShapeId for T {
 }
 
 impl<T: ProvideShapeMetadata> HasTraits for T {
-    fn traits(&self) -> &HashMap<ShapeId, Trait> {
+    fn traits(&self) -> &TraitMap {
         &self.meta().traits
     }
 }
@@ -225,6 +223,8 @@ impl Eq for ShapeMetadata {}
 mod tests {
     use super::*;
     use crate::shape::builder::ShapeBuilderExt;
+    use crate::traits::Documentation;
+    use std::collections::HashMap;
     use std::str::FromStr;
 
     #[test]
@@ -240,8 +240,6 @@ mod tests {
 
     #[test]
     fn test_shape_traits_access() {
-        let trait_id = ShapeId::new("smithy.api", "documentation").unwrap();
-
         let shape = StringShape::builder()
             .id("example.foo#MyString")
             .documentation("A string shape")
@@ -249,7 +247,7 @@ mod tests {
             .unwrap();
         let shape: Shape = shape.into();
 
-        assert!(shape.has_trait(trait_id));
+        assert!(shape.has_trait(Documentation::static_id()));
     }
 
     #[test]
@@ -286,6 +284,7 @@ mod tests {
     /// Tests for the core traits (HasShapeId, HasTraits, ProvideShapeMetadata)
     mod trait_tests {
         use super::*;
+
         use std::str::FromStr;
 
         // Test fixture - a simple shape that implements ProvideShapeMetadata
@@ -310,7 +309,7 @@ mod tests {
         #[test]
         fn test_has_traits() {
             let shape = create_test_shape();
-            let trait_id = ShapeId::new("smithy.api", "documentation").unwrap();
+            let trait_id = Documentation::static_id();
             let nonexistent = ShapeId::from_str("smithy.api#nonexistent").unwrap();
 
             // Test HasTraits methods
@@ -318,6 +317,12 @@ mod tests {
             assert!(shape.has_trait(&trait_id));
             assert!(shape.get_trait(&trait_id).is_some());
             assert!(shape.get_trait(&nonexistent).is_none());
+
+            assert!(shape.get_trait_as::<Documentation>().is_some());
+            assert_eq!(
+                shape.expect_trait::<Documentation>().0,
+                "Test documentation"
+            );
         }
 
         #[test]

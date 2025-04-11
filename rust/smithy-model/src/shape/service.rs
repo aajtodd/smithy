@@ -13,7 +13,7 @@ use crate::shape::{
     ProvideShapeMetadata, Shape, ShapeMetadata,
 };
 use crate::shape_id::ShapeId;
-use crate::traits::Trait;
+use crate::traits::TraitMap;
 
 /// A [service](https://smithy.io/2.0/spec/service-types.html#service) shape
 #[derive(Debug, Clone, PartialEq)]
@@ -31,7 +31,7 @@ pub struct ServiceShape {
 #[derive(Debug, Default)]
 pub struct ServiceShapeBuilder {
     id: Option<String>,
-    traits: HashMap<ShapeId, Trait>,
+    traits: TraitMap,
     operations: Vec<ShapeId>,
     resources: Vec<ShapeId>,
     version: Option<String>,
@@ -98,7 +98,7 @@ impl ServiceShapeBuilder {
 }
 
 impl ProvideTraitsMut for ServiceShapeBuilder {
-    fn traits_mut(&mut self) -> &mut HashMap<ShapeId, Trait> {
+    fn traits_mut(&mut self) -> &mut TraitMap {
         &mut self.traits
     }
 }
@@ -126,7 +126,7 @@ pub struct OperationShape {
 #[derive(Debug, Default)]
 pub struct OperationShapeBuilder {
     id: Option<String>,
-    traits: HashMap<ShapeId, Trait>,
+    traits: TraitMap,
     input: Option<ShapeId>,
     output: Option<ShapeId>,
     errors: Vec<ShapeId>,
@@ -187,7 +187,7 @@ impl OperationShapeBuilder {
 }
 
 impl ProvideTraitsMut for OperationShapeBuilder {
-    fn traits_mut(&mut self) -> &mut HashMap<ShapeId, Trait> {
+    fn traits_mut(&mut self) -> &mut TraitMap {
         &mut self.traits
     }
 }
@@ -225,7 +225,7 @@ pub struct ResourceShape {
 #[derive(Debug, Default)]
 pub struct ResourceShapeBuilder {
     id: Option<String>,
-    traits: HashMap<ShapeId, Trait>,
+    traits: TraitMap,
     identifiers: HashMap<String, ShapeId>,
     create: Option<ShapeId>,
     read: Option<ShapeId>,
@@ -339,7 +339,7 @@ impl ResourceShapeBuilder {
 }
 
 impl ProvideTraitsMut for ResourceShapeBuilder {
-    fn traits_mut(&mut self) -> &mut HashMap<ShapeId, Trait> {
+    fn traits_mut(&mut self) -> &mut TraitMap {
         &mut self.traits
     }
 }

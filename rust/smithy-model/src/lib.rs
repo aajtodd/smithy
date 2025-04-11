@@ -30,6 +30,7 @@ pub use error::{Error, Result};
 
 // TODO - define our prelude
 
+// TODO - unit type
 // TODO - mixins, apply statement, etc
 // TODO - resources are likely needing attention
 // TODO - can probably commonize service/resource shapes (e.g. Java EntityShape(Builder))
@@ -37,3 +38,5 @@ pub use error::{Error, Result};
 // TODO - model parsing
 // TODO - model loading/assembly
 // TODO - model validation framework
+// TODO - trait macro(s) for defining simple traits
+// TODO - additional traits

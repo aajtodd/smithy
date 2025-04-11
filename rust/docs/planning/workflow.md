@@ -13,6 +13,8 @@ This document outlines the workflow for implementing the Smithy Rust project wit
 * **Always confirm planned changes before executing them** - outline the changes and get approval before proceeding
 * **Make small, focused changes** rather than large scaffolding operations
 * **Preview code changes** before applying them, especially for file creation or modification
+* DO NOT re-organize module structure that wasn't agreed to
+  * If something is `pub mod` leave it that way if it's private leave it private. Same for `pub use` and `use`
 
 ## 1. Task Definition
 
