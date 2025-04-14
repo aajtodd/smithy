@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use crate::shape::{
     builder::{self, parse_shape_id, ProvideTraitsMut},
     error::BuildError,
-    ProvideShapeMetadata, Shape, ShapeMetadata,
+    ProvideShapeMetadata, Shape, ShapeMetadata, ShapeMetadataBuilder,
 };
 use crate::shape_id::ShapeId;
 use crate::traits::TraitMap;
@@ -23,6 +23,8 @@ pub struct ServiceShape {
     pub operations: Vec<ShapeId>,
     /// The resources that are part of this service
     pub resources: Vec<ShapeId>,
+    /// The errors that can be thrown by this service
+    pub errors: Vec<ShapeId>,
     /// The version of the service
     pub version: Option<String>,
 }
@@ -30,10 +32,10 @@ pub struct ServiceShape {
 /// Builder for creating a service shape.
 #[derive(Debug, Default)]
 pub struct ServiceShapeBuilder {
-    id: Option<String>,
-    traits: TraitMap,
+    metadata: ShapeMetadataBuilder,
     operations: Vec<ShapeId>,
     resources: Vec<ShapeId>,
+    errors: Vec<ShapeId>,
     version: Option<String>,
 }
 
@@ -45,7 +47,7 @@ impl ServiceShapeBuilder {
 
     /// Set the ID of the service shape.
     pub fn id(mut self, id: impl Into<String>) -> Self {
-        self.id = Some(id.into());
+        self.metadata = self.metadata.id(id);
         self
     }
 
@@ -62,7 +64,7 @@ impl ServiceShapeBuilder {
     }
 
     /// Add multiple operations to the service.
-    pub fn operations(mut self, operations: Vec<ShapeId>) -> Self {
+    pub fn operations(mut self, operations: impl IntoIterator<Item = ShapeId>) -> Self {
         self.operations.extend(operations);
         self
     }
@@ -74,24 +76,42 @@ impl ServiceShapeBuilder {
     }
 
     /// Add multiple resources to the service.
-    pub fn resources(mut self, resources: Vec<ShapeId>) -> Self {
+    pub fn resources(mut self, resources: impl IntoIterator<Item = ShapeId>) -> Self {
         self.resources.extend(resources);
+        self
+    }
+
+    /// Add an error to the service.
+    pub fn error(mut self, error: ShapeId) -> Self {
+        self.errors.push(error);
+        self
+    }
+
+    /// Add multiple errors to the service.
+    pub fn errors(mut self, errors: impl IntoIterator<Item = ShapeId>) -> Self {
+        self.errors.extend(errors);
+        self
+    }
+
+    /// Add a mixin to the service shape.
+    pub fn mixin(mut self, mixin: impl Into<Shape>) -> Self {
+        self.metadata = self.metadata.with_mixin(mixin.into());
         self
     }
 
     /// Build the service shape.
     pub fn build(self) -> Result<ServiceShape, BuildError> {
-        use builder::{field_names, required_field_error};
+        // Build the metadata
+        self.metadata
+            .validate_mixins(|shape| matches!(shape, Shape::Service(_)), "service")?;
 
-        let id_str = self
-            .id
-            .ok_or_else(|| required_field_error(field_names::ID))?;
-        let id = parse_shape_id(&id_str)?;
+        let metadata = self.metadata.build()?;
 
         Ok(ServiceShape {
-            metadata: ShapeMetadata::new(id, self.traits),
+            metadata,
             operations: self.operations,
             resources: self.resources,
+            errors: self.errors,
             version: self.version,
         })
     }
@@ -99,7 +119,7 @@ impl ServiceShapeBuilder {
 
 impl ProvideTraitsMut for ServiceShapeBuilder {
     fn traits_mut(&mut self) -> &mut TraitMap {
-        &mut self.traits
+        &mut self.metadata.introduced_traits
     }
 }
 
@@ -125,8 +145,7 @@ pub struct OperationShape {
 /// Builder for creating an operation shape.
 #[derive(Debug, Default)]
 pub struct OperationShapeBuilder {
-    id: Option<String>,
-    traits: TraitMap,
+    metadata: ShapeMetadataBuilder,
     input: Option<ShapeId>,
     output: Option<ShapeId>,
     errors: Vec<ShapeId>,
@@ -140,7 +159,7 @@ impl OperationShapeBuilder {
 
     /// Set the ID of the operation shape.
     pub fn id(mut self, id: impl Into<String>) -> Self {
-        self.id = Some(id.into());
+        self.metadata = self.metadata.id(id);
         self
     }
 
@@ -168,17 +187,22 @@ impl OperationShapeBuilder {
         self
     }
 
+    /// Add a mixin to the operation shape.
+    pub fn mixin(mut self, mixin: impl Into<Shape>) -> Self {
+        self.metadata = self.metadata.with_mixin(mixin.into());
+        self
+    }
+
     /// Build the operation shape.
     pub fn build(self) -> Result<OperationShape, BuildError> {
-        use builder::{field_names, required_field_error};
+        // Build the metadata
+        self.metadata
+            .validate_mixins(|shape| matches!(shape, Shape::Operation(_)), "operation")?;
 
-        let id_str = self
-            .id
-            .ok_or_else(|| required_field_error(field_names::ID))?;
-        let id = parse_shape_id(&id_str)?;
+        let metadata = self.metadata.build()?;
 
         Ok(OperationShape {
-            metadata: ShapeMetadata::new(id, self.traits),
+            metadata,
             input: self.input,
             output: self.output,
             errors: self.errors,
@@ -188,7 +212,7 @@ impl OperationShapeBuilder {
 
 impl ProvideTraitsMut for OperationShapeBuilder {
     fn traits_mut(&mut self) -> &mut TraitMap {
-        &mut self.traits
+        &mut self.metadata.introduced_traits
     }
 }
 
@@ -224,8 +248,7 @@ pub struct ResourceShape {
 /// Builder for creating a resource shape.
 #[derive(Debug, Default)]
 pub struct ResourceShapeBuilder {
-    id: Option<String>,
-    traits: TraitMap,
+    metadata: ShapeMetadataBuilder,
     identifiers: HashMap<String, ShapeId>,
     create: Option<ShapeId>,
     read: Option<ShapeId>,
@@ -244,7 +267,7 @@ impl ResourceShapeBuilder {
 
     /// Set the ID of the resource shape.
     pub fn id(mut self, id: impl Into<String>) -> Self {
-        self.id = Some(id.into());
+        self.metadata = self.metadata.id(id);
         self
     }
 
@@ -308,24 +331,28 @@ impl ResourceShapeBuilder {
         self
     }
 
+    /// Add a mixin to the resource shape.
+    pub fn mixin(mut self, mixin: impl Into<Shape>) -> Self {
+        self.metadata = self.metadata.with_mixin(mixin.into());
+        self
+    }
+
     /// Build the resource shape.
     pub fn build(self) -> Result<ResourceShape, BuildError> {
-        use builder::{field_names, required_field_error};
-
-        let id_str = self
-            .id
-            .ok_or_else(|| required_field_error(field_names::ID))?;
-        let id = parse_shape_id(&id_str)?;
-
         if self.identifiers.is_empty() {
             return Err(BuildError::InvalidValue {
-                field: field_names::IDENTIFIERS.to_string(),
+                field: builder::field_names::IDENTIFIERS.to_string(),
                 reason: "Resource must have at least one identifier".to_string(),
             });
         }
 
+        // Build the metadata
+        self.metadata
+            .validate_mixins(|shape| matches!(shape, Shape::Resource(_)), "resource")?;
+        let metadata = self.metadata.build()?;
+
         Ok(ResourceShape {
-            metadata: ShapeMetadata::new(id, self.traits),
+            metadata,
             identifiers: self.identifiers,
             create: self.create,
             read: self.read,
@@ -340,7 +367,7 @@ impl ResourceShapeBuilder {
 
 impl ProvideTraitsMut for ResourceShapeBuilder {
     fn traits_mut(&mut self) -> &mut TraitMap {
-        &mut self.traits
+        &mut self.metadata.introduced_traits
     }
 }
 

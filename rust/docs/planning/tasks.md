@@ -49,20 +49,24 @@
    - Update the `build` method to validate mixins
    - Add unit tests for the updated builder
 
-8. **MIXIN-008: Update ServiceShapeBuilder for mixins**
-   - Add `mixins` field to `ServiceShapeBuilder`
+8. **MIXIN-008: Update ServiceShape and ServiceShapeBuilder for mixins**
    - Add `mixin` method to add a mixin to the builder
+   - Add `introduced_version` field to the `ServiceShape`
+   - Add `introduced_rename` field to the `ServiceShape`
+   - Add `introduced_resources` field 
+   - Add `introduced_operations` field
+   - Add missing `error` method to add a common error to `ServiceShapeBuilder`
+   - Add missing `errors` method to add multiple common errors to `ServiceShapeBuilder`
+   - Add `introduced_errors` field to the `ServiceShape`
    - Update the `build` method to validate mixins
    - Add unit tests for the updated builder
 
 9. **MIXIN-009: Update ResourceShapeBuilder for mixins**
-   - Add `mixins` field to `ResourceShapeBuilder`
    - Add `mixin` method to add a mixin to the builder
    - Update the `build` method to validate mixins
    - Add unit tests for the updated builder
 
 10. **MIXIN-010: Update OperationShapeBuilder for mixins**
-    - Add `mixins` field to `OperationShapeBuilder`
     - Add `mixin` method to add a mixin to the builder
     - Update the `build` method to validate mixins
     - Add unit tests for the updated builder
