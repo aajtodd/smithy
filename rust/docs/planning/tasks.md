@@ -2,130 +2,116 @@
 
 * Remember to use our workflow instructions to complete tasks.
 
-## Current Focus: Trait Implementation
+## Current Focus: Mixin Implementation
 
-Reference the design in [trait design](trait-design.md)
+* Reference the design in [mixin-design.md](mixin-design.md)
+* Mixin spec (from the root of our rust project folder): `../docs/source-2.0/spec/mixins.rst`
 
-### Task 1: Core Trait Interface
+### Mixin Implementation Tasks
 
-- [x] Define the `Trait` trait in `traits.rs`
-    - [x] Add `static_id()` method for trait type identification
-    - [x] Add `id()` method with default implementation
-    - [x] Add `to_node()` method for serialization
-    - [x] Add `from_node()` method for deserialization
-    - [x] Add `from_node_boxed()` helper method
-    - [x] Add `clone_trait()` method for cloning trait objects
-    - [x] Add `as_any()` method for downcasting
-- [x] Implement the `BoxTrait` type alias
-- [x] Add comprehensive documentation for the trait methods
-- [x] Create unit tests for the trait interface
+#### Phase 1: Core Components
 
-### Task 2: Basic Trait Implementations
+1. **MIXIN-001: Define the Mixin trait**
+   - Create the `Mixin` struct in `traits/mod.rs`
+   - Implement the `Trait` trait for `Mixin`
+   - Add unit tests for the `Mixin` trait
 
-NOTE: implementations of "built in" (traits defined in the `smithy.api` namespace) will live under the
-`traits` module. e.g. the `Documentation` trait would be defined in `traits/documentation.rs`
+2. **MIXIN-002: Update ShapeMetadata to support mixins**
+   - Add `introduced_traits`, `effective_traits`, and `mixins` fields to `ShapeMetadata`
+   - Update `ShapeMetadata::new` to initialize these fields
+   - Add `add_mixin` method to `ShapeMetadata`
 
-- [x] Implement `Documentation` trait
-    - [x] Define the struct and implement `Trait`
-    - [x] Implement serialization to `Node`
-    - [x] Implement deserialization from `Node`
-    - [x] Write unit tests for serialization/deserialization
-    - [x] Add documentation
-- [x] Implement `Required` trait
-    - [x] Define the struct and implement `Trait`
-    - [x] Implement serialization to `Node`
-    - [x] Implement deserialization from `Node`
-    - [x] Write unit tests for serialization/deserialization
-    - [x] Add documentation
-- [x] Implement `Deprecated` trait
-    - [x] Define the struct and implement `Trait`
-    - [x] Implement serialization to `Node`
-    - [x] Implement deserialization from `Node`
-    - [x] Write unit tests for serialization/deserialization
-    - [x] Add documentation
-- [x] Implement `DynamicTrait` for unknown traits
-    - [x] Define the struct with ID and value fields
-    - [x] Implement `Trait` with custom `id()` method
-    - [x] Add constructor and accessor methods
-    - [x] Write unit tests
-    - [x] Add documentation
+3. **MIXIN-003: Update HasTraits trait**
+   - Add `introduced_traits` method to `HasTraits` trait
+   - Update the blanket implementation to return the appropriate fields
+   - Update existing code that uses `traits()` if necessary
 
-### Task 3: Trait Registry
+4. **MIXIN-004: Add HasMixins trait**
+   - Create the `HasMixins` trait in `shape.rs`
+   - Add blanket implementation for types that implement `ProvideShapeMetadata`
+   - Add unit tests for the `HasMixins` trait
 
-- [x] Implement the `TraitRegistry` struct in `traits/registry.rs`
-    - [x] Define the struct with creators map
-    - [x] Implement constructor with built-in traits
-- [x] Add methods for registering trait types
-    - [x] Implement `register<T: Trait + 'static>()` method
-    - [x] Add registration of built-in traits
-- [x] Implement trait creation from ID and Node
-    - [x] Add `create_trait()` method
-    - [x] Handle fallback to `DynamicTrait`
-    - [x] Add `is_registered()` helper method
-- [x] Write unit tests for the registry
-    - [x] Test registration of traits
-    - [x] Test creation of known traits
-    - [x] Test fallback to dynamic traits
-    - [x] Test error handling
+5. **MIXIN-005: Add mixin utility to ShapeBuilderExt**
+   - Add `mixin` method to `ShapeBuilderExt` trait
+   - Add unit tests for the `mixin` method
 
+#### Phase 2: Shape Builder Implementation
 
-### Task 4: Additional Trait Implementations
+6. **MIXIN-006: Update StructureShapeBuilder for mixins**
+   - Add `mixins` field to `StructureShapeBuilder`
+   - Add `mixin` method to add a mixin to the builder
+   - Update the `build` method to validate mixins
+   - Add unit tests for the updated builder
 
-- [ ] Implement common Smithy traits from the `smithy.api` namespace from the Smithy specification
-    - [ ] `Sensitive` trait
-    - [ ] `Pattern` trait
-    - [ ] `Length` trait
-    - [ ] `Range` trait
-    - [ ] `Title` trait
-    - [ ] `Trait` trait (meta-trait)
-- [ ] Write unit tests for each trait
-    - [ ] Test serialization/deserialization
-    - [ ] Test validation logic if applicable
-- [ ] Update trait registry to include all implemented traits
+7. **MIXIN-007: Update UnionShapeBuilder for mixins**
+   - Add `mixins` field to `UnionShapeBuilder`
+   - Add `mixin` method to add a mixin to the builder
+   - Update the `build` method to validate mixins
+   - Add unit tests for the updated builder
 
-### Task 5: Documentation and Examples
+8. **MIXIN-008: Update ServiceShapeBuilder for mixins**
+   - Add `mixins` field to `ServiceShapeBuilder`
+   - Add `mixin` method to add a mixin to the builder
+   - Update the `build` method to validate mixins
+   - Add unit tests for the updated builder
 
-- [ ] Document the trait system
-    - [ ] Add detailed comments to all types and methods
-    - [ ] Update the design document with final implementation details
-- [ ] Add examples for common use cases
-    - [ ] Example for creating and using traits
-    - [ ] Example for working with dynamic traits
-    - [ ] Example for implementing custom traits
-- [ ] Create a guide for implementing custom traits
-    - [ ] Step-by-step instructions
-    - [ ] Best practices
-    - [ ] Common pitfalls to avoid
+9. **MIXIN-009: Update ResourceShapeBuilder for mixins**
+   - Add `mixins` field to `ResourceShapeBuilder`
+   - Add `mixin` method to add a mixin to the builder
+   - Update the `build` method to validate mixins
+   - Add unit tests for the updated builder
 
-## Implementation Strategy
+10. **MIXIN-010: Update OperationShapeBuilder for mixins**
+    - Add `mixins` field to `OperationShapeBuilder`
+    - Add `mixin` method to add a mixin to the builder
+    - Update the `build` method to validate mixins
+    - Add unit tests for the updated builder
 
-We will implement the trait system in the following order:
+11. **MIXIN-011: Update simple shape builders for mixins**
+    - Add mixin support to simple shape builders (String, Boolean, etc.)
+    - Add unit tests for the updated builders
 
-1. Start with the core interfaces (`Trait`, `BoxTrait`)
-2. Implement a few basic traits (`Documentation`, `Required`)
-3. Add the `DynamicTrait` implementation
-4. Implement the `TraitRegistry`
-5. Update the `Shape` struct to work with traits
-6. Implement serialization/deserialization
-7. Add more trait implementations
-8. Add tests and documentation
-9. Replace existing occurrences of "manually constructed" `documentation` and `required` traits with the new actual definitions 
+#### Phase 3: Mixin Resolution Functions
 
-This approach allows us to build and test incrementally, ensuring each component works before moving on to the next.
+12. **MIXIN-012: Implement cycle detection**
+    - Create a function to detect cycles in mixin references
+    - Add unit tests for cycle detection
 
-## Testing Strategy
+13. **MIXIN-013: Implement trait resolution**
+    - Create a function to compute effective traits from mixins
+    - Add unit tests for trait resolution
 
-- **Unit Tests**: Each component will have comprehensive unit tests
-- **Integration Tests**: Test the interaction between components
-- **Property Tests**: Use property-based testing for serialization/deserialization
-- **Example Tests**: Create example-based tests for common use cases
-- **Edge Cases**: Test error handling and edge cases
+14. **MIXIN-014: Implement member resolution for structures**
+    - Create a function to compute effective members for structures
+    - Add unit tests for member resolution
 
-## Next Steps
+15. **MIXIN-015: Implement member resolution for unions**
+    - Create a function to compute effective members for unions
+    - Add unit tests for member resolution
 
-After completing the trait implementation, we will move on to:
+16. **MIXIN-016: Implement property resolution for services**
+    - Create a function to merge service properties from mixins
+    - Add unit tests for service property resolution
 
-1. Designing the model (container) APIs
-2. Model validation
-3. Selector implementation
-4. Code generation framework
+17. **MIXIN-017: Implement property resolution for operations**
+    - Create a function to merge operation properties from mixins
+    - Add unit tests for operation property resolution
+
+#### Phase 4: Integration and Testing
+
+18. **MIXIN-018: Add comprehensive integration tests**
+    - Create tests for complex mixin scenarios
+    - Test trait inheritance and precedence
+    - Test member inheritance and conflicts
+    - Test cycle detection
+
+19. **MIXIN-019: Add documentation**
+    - Update module documentation to explain mixin support
+    - Add examples to the documentation
+    - Update README if necessary
+
+20. **MIXIN-020: Performance optimization**
+    - Profile mixin resolution performance
+    - Optimize if necessary
+    - Add benchmarks for mixin resolution
+
