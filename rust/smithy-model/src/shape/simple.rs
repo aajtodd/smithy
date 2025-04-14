@@ -77,7 +77,7 @@ macro_rules! define_simple_shape {
                 pub fn to_builder(self) -> [<$shape_name Builder>] {
                     [<$shape_name Builder>] {
                         id: Some(self.metadata.id.to_string()),
-                        traits: self.metadata.traits,
+                        traits: self.metadata.effective_traits,
                     }
                 }
             }
@@ -267,7 +267,7 @@ impl EnumShape {
     pub fn to_builder(self) -> EnumShapeBuilder {
         EnumShapeBuilder {
             id: Some(self.metadata.id.to_string()),
-            traits: self.metadata.traits,
+            traits: self.metadata.effective_traits,
             members: self.members,
         }
     }
@@ -381,7 +381,7 @@ impl IntEnumShape {
     pub fn to_builder(self) -> IntEnumShapeBuilder {
         IntEnumShapeBuilder {
             id: Some(self.metadata.id.to_string()),
-            traits: self.metadata.traits,
+            traits: self.metadata.effective_traits,
             members: self.members,
             values: self.values,
         }

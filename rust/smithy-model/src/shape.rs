@@ -145,8 +145,11 @@ pub trait HasShapeId {
 
 /// Common trait for all shape types providing access to traits
 pub trait HasTraits: HasShapeId {
-    /// Get all traits applied to this shape
+    /// Get all traits applied to this shape (including those from mixins)
     fn traits(&self) -> &TraitMap;
+
+    /// Get traits applied directly to this shape (excluding those from mixins)
+    fn introduced_traits(&self) -> &TraitMap;
 
     /// Check if this shape has a specific trait
     fn has_trait(&self, trait_id: impl AsRef<ShapeId>) -> bool {
@@ -182,19 +185,48 @@ pub(crate) trait ProvideShapeMetadata {
     fn meta(&self) -> &ShapeMetadata;
 }
 
+/// Common trait for all shape types providing access to mixins
+pub trait HasMixins: HasShapeId {
+    /// Get the mixins applied to this shape
+    fn mixins(&self) -> &[Shape];
+}
+
+// Blanket implementation for any type that provides shape metadata
+impl<T: ProvideShapeMetadata> HasMixins for T {
+    fn mixins(&self) -> &[Shape] {
+        &self.meta().mixins
+    }
+}
+
+// TODO - add a builder for ShapeMetadata so that we can re-use it across shapes and in `to_builder()` so we don't lose where traits came from
+
 /// Common metadata for all shapes (implementation detail)
 #[derive(Debug, Clone)]
 pub(crate) struct ShapeMetadata {
     /// The shape ID
     id: ShapeId,
-    /// Traits applied to this shape
-    traits: TraitMap,
+    /// Traits applied directly to this shape (introduced traits)
+    introduced_traits: TraitMap,
+    /// All traits applied to this shape (including those from mixins)
+    effective_traits: TraitMap,
+    /// Mixins applied to this shape (full shape references)
+    mixins: Vec<Shape>,
 }
 
 impl ShapeMetadata {
     /// Create new shape metadata
     pub(crate) fn new(id: ShapeId, traits: TraitMap) -> Self {
-        Self { id, traits }
+        Self {
+            id,
+            introduced_traits: traits.clone(),
+            effective_traits: traits,
+            mixins: Vec::new(),
+        }
+    }
+
+    /// Add a mixin to this shape
+    pub(crate) fn add_mixin(&mut self, mixin: Shape) {
+        self.mixins.push(mixin);
     }
 }
 
@@ -207,13 +239,20 @@ impl<T: ProvideShapeMetadata> HasShapeId for T {
 
 impl<T: ProvideShapeMetadata> HasTraits for T {
     fn traits(&self) -> &TraitMap {
-        &self.meta().traits
+        &self.meta().effective_traits
+    }
+
+    fn introduced_traits(&self) -> &TraitMap {
+        &self.meta().introduced_traits
     }
 }
 
 impl PartialEq for ShapeMetadata {
     fn eq(&self, other: &Self) -> bool {
-        self.id == other.id && self.traits == other.traits
+        self.id == other.id
+            && self.introduced_traits == other.introduced_traits
+            && self.effective_traits == other.effective_traits
+            && self.mixins == other.mixins
     }
 }
 
@@ -323,6 +362,10 @@ mod tests {
                 shape.expect_trait::<Documentation>().0,
                 "Test documentation"
             );
+
+            // Test introduced_traits
+            assert_eq!(shape.introduced_traits().len(), 1);
+            assert!(shape.introduced_traits().contains_key(&trait_id));
         }
 
         #[test]
@@ -331,11 +374,19 @@ mod tests {
 
             // Test that metadata is correctly initialized
             assert_eq!(shape.meta().id.to_string(), "example.foo#TestShape");
-            assert_eq!(shape.meta().traits.len(), 1);
+            assert_eq!(shape.meta().effective_traits.len(), 1);
             assert!(shape
                 .meta()
-                .traits
+                .effective_traits
                 .contains_key(&ShapeId::new("smithy.api", "documentation").unwrap()));
+
+            // Test that introduced_traits matches effective_traits initially
+            assert_eq!(shape.meta().introduced_traits.len(), 1);
+            assert_eq!(shape.meta().mixins.len(), 0);
+            assert_eq!(
+                shape.meta().introduced_traits.keys().collect::<Vec<_>>(),
+                shape.meta().effective_traits.keys().collect::<Vec<_>>()
+            );
         }
 
         #[test]

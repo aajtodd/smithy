@@ -88,7 +88,7 @@ impl ListShape {
     pub fn to_builder(self) -> ListShapeBuilder {
         ListShapeBuilder {
             id: Some(self.metadata.id.to_string()),
-            traits: self.metadata.traits,
+            traits: self.metadata.effective_traits,
             member: Some(self.member),
         }
     }
@@ -187,7 +187,7 @@ impl MapShape {
     pub fn to_builder(self) -> MapShapeBuilder {
         MapShapeBuilder {
             id: Some(self.metadata.id.to_string()),
-            traits: self.metadata.traits,
+            traits: self.metadata.effective_traits,
             key: Some(self.key),
             value: Some(self.value),
         }
@@ -269,7 +269,7 @@ impl SetShape {
     pub fn to_builder(self) -> SetShapeBuilder {
         SetShapeBuilder {
             id: Some(self.metadata.id.to_string()),
-            traits: self.metadata.traits,
+            traits: self.metadata.effective_traits,
             member: Some(self.member),
         }
     }
@@ -358,7 +358,7 @@ impl StructureShape {
     pub fn to_builder(self) -> StructureShapeBuilder {
         StructureShapeBuilder {
             id: Some(self.metadata.id.to_string()),
-            traits: self.metadata.traits,
+            traits: self.metadata.effective_traits,
             members: self.members,
         }
     }
@@ -435,7 +435,7 @@ impl UnionShape {
     pub fn to_builder(self) -> UnionShapeBuilder {
         UnionShapeBuilder {
             id: Some(self.metadata.id.to_string()),
-            traits: self.metadata.traits,
+            traits: self.metadata.effective_traits,
             members: self.members,
         }
     }
