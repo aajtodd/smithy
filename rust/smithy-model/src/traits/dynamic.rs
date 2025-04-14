@@ -27,7 +27,7 @@ use std::any::Any;
 /// let value = Node::String("custom value".to_string());
 /// let trait_ = DynamicTrait::new(id.clone(), Some(value.clone()));
 ///
-/// assert_eq!(trait_.id(), id);
+/// assert_eq!(*trait_.id(), id);
 /// assert_eq!(trait_.value(), Some(&value));
 /// ```
 #[derive(Clone, Debug, PartialEq)]
@@ -56,15 +56,17 @@ impl DynamicTrait {
     }
 }
 
+const TRAIT_ID: &'static ShapeId = &ShapeId::new_static("smithy.synthetic", "dynamic");
+
 impl Trait for DynamicTrait {
-    fn static_id() -> ShapeId {
+    fn static_id() -> &'static ShapeId {
         // This is a placeholder - the actual ID is stored in the instance
-        ShapeId::new_unchecked("smithy.synthetic#dynamic")
+        &TRAIT_ID
     }
 
     // Override the default implementation to return the instance-specific ID
-    fn id(&self) -> ShapeId {
-        self.id.clone()
+    fn id(&self) -> &ShapeId {
+        &self.id
     }
 
     fn to_node(&self) -> Node {
@@ -97,7 +99,7 @@ mod tests {
         let trait_ = DynamicTrait::new(id.clone(), Some(value.clone()));
 
         // Test id and value
-        assert_eq!(trait_.id(), id);
+        assert_eq!(*trait_.id(), id);
         assert_eq!(trait_.value(), Some(&value));
 
         // Test to_node
@@ -116,7 +118,7 @@ mod tests {
         let trait_ = DynamicTrait::new(id.clone(), None);
 
         // Test id and value
-        assert_eq!(trait_.id(), id);
+        assert_eq!(*trait_.id(), id);
         assert_eq!(trait_.value(), None);
 
         // Test to_node

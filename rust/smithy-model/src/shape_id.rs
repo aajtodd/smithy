@@ -187,7 +187,16 @@ impl ShapeId {
         try_from_parts(namespace, name, None::<String>)
     }
 
-    /// Creates a new ShapeId from a static string panicking if the ID is invalid.
+    /// Creates a new ShapeId from a static string without checking the validity of the id
+    pub const fn new_static(namespace: &'static str, name: &'static str) -> ShapeId {
+        ShapeId {
+            namespace: Cow::Borrowed(namespace),
+            name: Cow::Borrowed(name),
+            member: None,
+        }
+    }
+
+    /// Creates a new ShapeId from a static string without checking the validity of the id
     #[doc(hidden)]
     pub fn new_unchecked(id: &'static str) -> ShapeId {
         let (namespace, name) = id.split_once('#').unwrap();

@@ -30,6 +30,8 @@ pub use required::Required;
 /// Type alias for boxed trait objects
 pub type BoxTrait = Box<dyn Trait>;
 
+// TODO - could we make this simpler by having a custom derive `Trait(id)` proc macro or something?
+
 /// Trait for implementing Smithy traits
 ///
 /// This trait defines the interface for all Smithy traits. Each trait implementation
@@ -46,12 +48,14 @@ pub type BoxTrait = Box<dyn Trait>;
 /// #[derive(Clone, Debug)]
 /// struct MyTrait(String);
 ///
+/// const TRAIT_ID: &'static ShapeId = &ShapeId::new_static("example", "myTrait");
+///
 /// impl Trait for MyTrait {
-///     fn static_id() -> ShapeId {
-///         ShapeId::new_unchecked("example#myTrait")
+///     fn static_id() -> &'static ShapeId {
+///         TRAIT_ID
 ///     }
 ///
-///     fn id(&self) -> ShapeId {
+///     fn id(&self) -> &ShapeId {
 ///         Self::static_id()
 ///     }
 ///
@@ -77,15 +81,16 @@ pub trait Trait: Any + fmt::Debug {
     ///
     /// This method returns the ShapeId that uniquely identifies this trait type.
     /// It is used for trait registration and lookup.
-    fn static_id() -> ShapeId
+    fn static_id() -> &'static ShapeId
     where
         Self: Sized;
 
     /// Returns the ID of this trait instance
     ///
-    /// By default, this returns the static ID of the trait type. Dynamic traits
-    /// override this method to return their instance-specific ID.
-    fn id(&self) -> ShapeId;
+    /// Implementations MUST return the same ID as `static_id()`.
+    /// The only exception is unknown traits which are mapped to [DynamicTrait]
+    /// which will override this method to return their instance-specific ID.
+    fn id(&self) -> &ShapeId;
 
     /// Convert this trait to a Node for serialization
     ///
@@ -236,12 +241,14 @@ mod tests {
     #[derive(Clone, Debug)]
     struct TestTrait(String);
 
+    const TRAIT_ID: &'static ShapeId = &ShapeId::new_static("test", "testTrait");
+
     impl Trait for TestTrait {
-        fn static_id() -> ShapeId {
-            ShapeId::new_unchecked("test#testTrait")
+        fn static_id() -> &'static ShapeId {
+            TRAIT_ID
         }
 
-        fn id(&self) -> ShapeId {
+        fn id(&self) -> &ShapeId {
             Self::static_id()
         }
 
@@ -307,7 +314,7 @@ mod tests {
         // Test iter
         let mut iter_count = 0;
         for (id, trait_obj) in map.iter() {
-            assert_eq!(id, &TestTrait::static_id());
+            assert_eq!(id, TestTrait::static_id());
             assert!(matches!(trait_obj.to_node(), Node::String(_)));
             iter_count += 1;
         }
@@ -316,7 +323,7 @@ mod tests {
         // Test keys
         let keys: Vec<_> = map.keys().collect();
         assert_eq!(keys.len(), 1);
-        assert_eq!(keys[0], &TestTrait::static_id());
+        assert_eq!(keys[0], TestTrait::static_id());
 
         // Test values
         let values: Vec<_> = map.values().collect();

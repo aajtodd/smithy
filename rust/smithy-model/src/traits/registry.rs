@@ -143,7 +143,7 @@ mod tests {
 
         let trait_ = registry.create_trait(&id, &node);
         let dynamic = trait_.as_any().downcast_ref::<DynamicTrait>().unwrap();
-        assert_eq!(dynamic.id(), id);
+        assert_eq!(*dynamic.id(), id);
         assert_eq!(dynamic.value(), Some(&node));
     }
 
@@ -163,12 +163,14 @@ mod tests {
         #[derive(Clone, Debug, PartialEq)]
         struct CustomTrait(String);
 
+        const TRAIT_ID: &'static ShapeId = &ShapeId::new_static("example", "customTrait");
+
         impl Trait for CustomTrait {
-            fn static_id() -> ShapeId {
-                ShapeId::new_unchecked("example#customTrait")
+            fn static_id() -> &'static ShapeId {
+                TRAIT_ID
             }
 
-            fn id(&self) -> ShapeId {
+            fn id(&self) -> &ShapeId {
                 Self::static_id()
             }
 

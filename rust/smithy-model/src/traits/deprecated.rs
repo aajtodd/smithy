@@ -72,12 +72,14 @@ impl Default for Deprecated {
     }
 }
 
+const TRAIT_ID: &'static ShapeId = &ShapeId::new_static("smithy.api", "deprecated");
+
 impl Trait for Deprecated {
-    fn static_id() -> ShapeId {
-        ShapeId::new_unchecked("smithy.api#deprecated")
+    fn static_id() -> &'static ShapeId {
+        TRAIT_ID
     }
 
-    fn id(&self) -> ShapeId {
+    fn id(&self) -> &ShapeId {
         Self::static_id()
     }
 

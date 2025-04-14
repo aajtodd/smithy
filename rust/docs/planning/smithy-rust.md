@@ -35,31 +35,48 @@ write an equivalent in the Rust programming language.
 
 ## Project Structure
 
-The Smithy Rust implementation is organized into the following crates:
+### Workspace Root 
+* Cargo.toml - Defines the workspace with two members: smithy-ast and smithy-model
+* .gitignore - Standard Git ignore file
+* docs/ - Documentation and planning materials
 
-```
-/rust/
-├── Cargo.toml                 # Workspace configuration
-├── smithy-ast/                # AST representation and IDL parser
-│   ├── Cargo.toml
-│   └── src/
-│       ├── lib.rs             # Main library entry point
-│       ├── error.rs           # Error types for parsing operations
-│       ├── ast.rs             # AST data structures
-│       └── parser.rs          # Parser implementation
-└── smithy-model/              # Semantic model
-    ├── Cargo.toml
-    └── src/
-        ├── lib.rs             # Main library entry point
-        ├── error.rs           # Error types for model operations
-        ├── shape_id.rs        # ShapeId implementation
-        ├── shape.rs           # Shape implementations
-        ├── traits.rs          # Trait implementations
-        ├── model.rs           # Model implementation
-        ├── loader.rs          # Model loading from AST and JSON
-        ├── validation.rs      # Validation framework
-        └── selector.rs        # Selector implementation
-```
+### Smithy Model (smithy-model/)
+
+This crate implements the semantic model of Smithy, handling the validated and processed representation.
+
+Key files:
+* src/lib.rs - Main library entry point
+* src/shape_id.rs - Implementation of ShapeId, the unique identifier for shapes
+* src/shape.rs - Core shape implementations and interfaces
+* src/traits.rs - Implementation of Smithy traits (metadata attached to shapes)
+* src/error.rs - Error types for model operations
+* src/node.rs - Node representation for the model
+
+Subdirectories:
+* src/shape/ - Contains implementations of specific shape types
+* src/traits/ - Contains implementations of specific trait types
+
+### Smithy AST (smithy-ast/)
+This crate handles the Abstract Syntax Tree representation and parsing of the Smithy IDL.
+
+Key files:
+* src/lib.rs - Main library entry point
+* src/ast.rs - AST data structures representing the raw syntax
+* src/error.rs - Error types for parsing operations
+* src/parser.rs - Parser implementation for converting Smithy IDL text into AST
+
+
+### 4. Documentation (docs/planning/)
+
+Contains detailed design and planning documents:
+* smithy-rust.md - Overview of the project and architecture
+* workflow.md - Development workflow guidelines
+* tasks.md - Task tracking and planning
+* detailed-design.md - Detailed design specifications
+* trait-design.md - Design for trait implementations
+* shape-design.md - Design for shape implementations
+* implementation-notes.md - Notes on implementation decisions
+
 
 This separation allows the parser to focus solely on syntax without worrying about semantic validation, while the model can focus on the semantic representation and operations.
 

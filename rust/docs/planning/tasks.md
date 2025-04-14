@@ -8,65 +8,65 @@ Reference the design in [trait design](trait-design.md)
 
 ### Task 1: Core Trait Interface
 
-- [ ] Define the `Trait` trait in `traits.rs`
-    - [ ] Add `static_id()` method for trait type identification
-    - [ ] Add `id()` method with default implementation
-    - [ ] Add `to_node()` method for serialization
-    - [ ] Add `from_node()` method for deserialization
-    - [ ] Add `from_node_boxed()` helper method
-    - [ ] Add `clone_trait()` method for cloning trait objects
-    - [ ] Add `as_any()` method for downcasting
-- [ ] Implement the `BoxTrait` type alias
-- [ ] Add comprehensive documentation for the trait methods
-- [ ] Create unit tests for the trait interface
+- [x] Define the `Trait` trait in `traits.rs`
+    - [x] Add `static_id()` method for trait type identification
+    - [x] Add `id()` method with default implementation
+    - [x] Add `to_node()` method for serialization
+    - [x] Add `from_node()` method for deserialization
+    - [x] Add `from_node_boxed()` helper method
+    - [x] Add `clone_trait()` method for cloning trait objects
+    - [x] Add `as_any()` method for downcasting
+- [x] Implement the `BoxTrait` type alias
+- [x] Add comprehensive documentation for the trait methods
+- [x] Create unit tests for the trait interface
 
 ### Task 2: Basic Trait Implementations
 
 NOTE: implementations of "built in" (traits defined in the `smithy.api` namespace) will live under the
 `traits` module. e.g. the `Documentation` trait would be defined in `traits/documentation.rs`
 
-- [ ] Implement `Documentation` trait
-    - [ ] Define the struct and implement `Trait`
-    - [ ] Implement serialization to `Node`
-    - [ ] Implement deserialization from `Node`
-    - [ ] Write unit tests for serialization/deserialization
-    - [ ] Add documentation
-- [ ] Implement `Required` trait
-    - [ ] Define the struct and implement `Trait`
-    - [ ] Implement serialization to `Node`
-    - [ ] Implement deserialization from `Node`
-    - [ ] Write unit tests for serialization/deserialization
-    - [ ] Add documentation
-- [ ] Implement `Deprecated` trait
-    - [ ] Define the struct and implement `Trait`
-    - [ ] Implement serialization to `Node`
-    - [ ] Implement deserialization from `Node`
-    - [ ] Write unit tests for serialization/deserialization
-    - [ ] Add documentation
-- [ ] Implement `DynamicTrait` for unknown traits
-    - [ ] Define the struct with ID and value fields
-    - [ ] Implement `Trait` with custom `id()` method
-    - [ ] Add constructor and accessor methods
-    - [ ] Write unit tests
-    - [ ] Add documentation
+- [x] Implement `Documentation` trait
+    - [x] Define the struct and implement `Trait`
+    - [x] Implement serialization to `Node`
+    - [x] Implement deserialization from `Node`
+    - [x] Write unit tests for serialization/deserialization
+    - [x] Add documentation
+- [x] Implement `Required` trait
+    - [x] Define the struct and implement `Trait`
+    - [x] Implement serialization to `Node`
+    - [x] Implement deserialization from `Node`
+    - [x] Write unit tests for serialization/deserialization
+    - [x] Add documentation
+- [x] Implement `Deprecated` trait
+    - [x] Define the struct and implement `Trait`
+    - [x] Implement serialization to `Node`
+    - [x] Implement deserialization from `Node`
+    - [x] Write unit tests for serialization/deserialization
+    - [x] Add documentation
+- [x] Implement `DynamicTrait` for unknown traits
+    - [x] Define the struct with ID and value fields
+    - [x] Implement `Trait` with custom `id()` method
+    - [x] Add constructor and accessor methods
+    - [x] Write unit tests
+    - [x] Add documentation
 
 ### Task 3: Trait Registry
 
-- [ ] Implement the `TraitRegistry` struct in `traits/registry.rs`
-    - [ ] Define the struct with creators map
-    - [ ] Implement constructor with built-in traits
-- [ ] Add methods for registering trait types
-    - [ ] Implement `register<T: Trait + 'static>()` method
-    - [ ] Add registration of built-in traits
-- [ ] Implement trait creation from ID and Node
-    - [ ] Add `create_trait()` method
-    - [ ] Handle fallback to `DynamicTrait`
-    - [ ] Add `is_registered()` helper method
-- [ ] Write unit tests for the registry
-    - [ ] Test registration of traits
-    - [ ] Test creation of known traits
-    - [ ] Test fallback to dynamic traits
-    - [ ] Test error handling
+- [x] Implement the `TraitRegistry` struct in `traits/registry.rs`
+    - [x] Define the struct with creators map
+    - [x] Implement constructor with built-in traits
+- [x] Add methods for registering trait types
+    - [x] Implement `register<T: Trait + 'static>()` method
+    - [x] Add registration of built-in traits
+- [x] Implement trait creation from ID and Node
+    - [x] Add `create_trait()` method
+    - [x] Handle fallback to `DynamicTrait`
+    - [x] Add `is_registered()` helper method
+- [x] Write unit tests for the registry
+    - [x] Test registration of traits
+    - [x] Test creation of known traits
+    - [x] Test fallback to dynamic traits
+    - [x] Test error handling
 
 
 ### Task 4: Additional Trait Implementations

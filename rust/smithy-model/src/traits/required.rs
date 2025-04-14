@@ -31,12 +31,14 @@ use std::any::Any;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Required;
 
+const TRAIT_ID: &'static ShapeId = &ShapeId::new_static("smithy.api", "required");
+
 impl Trait for Required {
-    fn static_id() -> ShapeId {
-        ShapeId::new_unchecked("smithy.api#required")
+    fn static_id() -> &'static ShapeId {
+        &TRAIT_ID
     }
 
-    fn id(&self) -> ShapeId {
+    fn id(&self) -> &ShapeId {
         Self::static_id()
     }
 
