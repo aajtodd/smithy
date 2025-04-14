@@ -198,7 +198,63 @@ impl<T: ProvideShapeMetadata> HasMixins for T {
     }
 }
 
-// TODO - add a builder for ShapeMetadata so that we can re-use it across shapes and in `to_builder()` so we don't lose where traits came from
+/// Builder for creating shape metadata
+#[derive(Debug, Default, Clone)]
+pub(crate) struct ShapeMetadataBuilder {
+    /// The shape ID string
+    id: Option<String>,
+    /// Traits applied directly to this shape (introduced traits)
+    pub(crate) introduced_traits: TraitMap,
+    /// Mixins applied to this shape
+    mixins: Vec<Shape>,
+}
+
+impl ShapeMetadataBuilder {
+    /// Create a new shape metadata builder
+    pub(crate) fn new() -> Self {
+        Self::default()
+    }
+
+    /// Set the ID of the shape
+    pub(crate) fn id(mut self, id: impl Into<String>) -> Self {
+        self.id = Some(id.into());
+        self
+    }
+
+    /// Add a trait to the shape
+    pub(crate) fn with_trait(mut self, trait_obj: impl Trait) -> Self {
+        self.introduced_traits.insert(Box::new(trait_obj));
+        self
+    }
+
+    /// Add a mixin to the shape
+    pub(crate) fn with_mixin(mut self, mixin: Shape) -> Self {
+        self.mixins.push(mixin);
+        self
+    }
+
+    /// Build the shape metadata
+    pub(crate) fn build(self) -> Result<ShapeMetadata, BuildError> {
+        use builder::{field_names, parse_shape_id, required_field_error};
+
+        let id_str = self
+            .id
+            .ok_or_else(|| required_field_error(field_names::ID))?;
+        let id = parse_shape_id(&id_str)?;
+
+        let mut metadata = ShapeMetadata::new(id, self.introduced_traits);
+
+        // Add mixins
+        for mixin in self.mixins {
+            metadata.add_mixin(mixin);
+        }
+
+        // TODO: Compute effective traits from mixins
+        // This will be implemented as part of the mixin resolution functions
+
+        Ok(metadata)
+    }
+}
 
 /// Common metadata for all shapes (implementation detail)
 #[derive(Debug, Clone)]
@@ -227,6 +283,24 @@ impl ShapeMetadata {
     /// Add a mixin to this shape
     pub(crate) fn add_mixin(&mut self, mixin: Shape) {
         self.mixins.push(mixin);
+    }
+
+    /// Convert this metadata to a builder
+    pub(crate) fn to_builder(&self) -> ShapeMetadataBuilder {
+        let mut builder = ShapeMetadataBuilder::new().id(self.id.to_string());
+
+        // Copy introduced traits
+        for trait_obj in self.introduced_traits.values() {
+            let cloned = trait_obj.clone_trait();
+            builder.introduced_traits.insert(cloned);
+        }
+
+        // Copy mixins
+        for mixin in &self.mixins {
+            builder.mixins.push(mixin.clone());
+        }
+
+        builder
     }
 }
 

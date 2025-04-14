@@ -8,7 +8,7 @@
 use crate::shape::{
     builder::{self, parse_shape_id, ProvideTraitsMut},
     error::BuildError,
-    MemberShape, ProvideShapeMetadata, Shape, ShapeMetadata,
+    MemberShape, ProvideShapeMetadata, Shape, ShapeMetadata, ShapeMetadataBuilder,
 };
 use crate::traits::TraitMap;
 use paste::paste;
@@ -32,8 +32,7 @@ macro_rules! define_simple_shape {
             /// Builder for creating a $shape_name.
             #[derive(Debug, Default)]
             pub struct [<$shape_name Builder>] {
-                id: Option<String>,
-                traits: TraitMap,
+                metadata: ShapeMetadataBuilder,
             }
 
             impl [<$shape_name Builder>] {
@@ -44,26 +43,23 @@ macro_rules! define_simple_shape {
 
                 /// Set the ID of the $shape_name.
                 pub fn id(mut self, id: impl Into<String>) -> Self {
-                    self.id = Some(id.into());
+                    self.metadata = self.metadata.id(id);
                     self
                 }
 
                 /// Build the $shape_name.
                 pub fn build(self) -> Result<$shape_name, BuildError> {
-                    use builder::{field_names, required_field_error};
-
-                    let id_str = self.id.ok_or_else(|| required_field_error(field_names::ID))?;
-                    let id = parse_shape_id(&id_str)?;
+                    let metadata = self.metadata.build()?;
 
                     Ok($shape_name {
-                        metadata: ShapeMetadata::new(id, self.traits),
+                        metadata,
                     })
                 }
             }
 
             impl ProvideTraitsMut for [<$shape_name Builder>] {
                 fn traits_mut(&mut self) -> &mut TraitMap {
-                    &mut self.traits
+                    &mut self.metadata.introduced_traits
                 }
             }
 
@@ -76,8 +72,7 @@ macro_rules! define_simple_shape {
                 /// Convert this shape back into a builder
                 pub fn to_builder(self) -> [<$shape_name Builder>] {
                     [<$shape_name Builder>] {
-                        id: Some(self.metadata.id.to_string()),
-                        traits: self.metadata.effective_traits,
+                        metadata: self.metadata.to_builder(),
                     }
                 }
             }

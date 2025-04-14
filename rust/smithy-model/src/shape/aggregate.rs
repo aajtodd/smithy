@@ -8,7 +8,7 @@
 use crate::shape::{
     builder::{self, parse_shape_id, ProvideTraitsMut},
     error::BuildError,
-    MemberShape, ProvideShapeMetadata, Shape, ShapeMetadata,
+    MemberShape, ProvideShapeMetadata, Shape, ShapeMetadata, ShapeMetadataBuilder,
 };
 use crate::traits::TraitMap;
 use std::collections::HashMap;
@@ -24,8 +24,7 @@ pub struct ListShape {
 /// Builder for creating a list shape.
 #[derive(Debug, Default)]
 pub struct ListShapeBuilder {
-    id: Option<String>,
-    traits: TraitMap,
+    metadata: ShapeMetadataBuilder,
     member: Option<MemberShape>,
 }
 
@@ -37,7 +36,7 @@ impl ListShapeBuilder {
 
     /// Set the ID of the list shape.
     pub fn id(mut self, id: impl Into<String>) -> Self {
-        self.id = Some(id.into());
+        self.metadata = self.metadata.id(id);
         self
     }
 
@@ -51,25 +50,19 @@ impl ListShapeBuilder {
     pub fn build(self) -> Result<ListShape, BuildError> {
         use builder::{field_names, required_field_error};
 
-        let id_str = self
-            .id
-            .ok_or_else(|| required_field_error(field_names::ID))?;
-        let id = parse_shape_id(&id_str)?;
+        let metadata = self.metadata.build()?;
 
         let member = self
             .member
             .ok_or_else(|| required_field_error(field_names::MEMBER))?;
 
-        Ok(ListShape {
-            metadata: ShapeMetadata::new(id, self.traits),
-            member,
-        })
+        Ok(ListShape { metadata, member })
     }
 }
 
 impl ProvideTraitsMut for ListShapeBuilder {
     fn traits_mut(&mut self) -> &mut TraitMap {
-        &mut self.traits
+        &mut self.metadata.introduced_traits
     }
 }
 
@@ -87,8 +80,7 @@ impl ListShape {
     /// Convert this shape back into a builder
     pub fn to_builder(self) -> ListShapeBuilder {
         ListShapeBuilder {
-            id: Some(self.metadata.id.to_string()),
-            traits: self.metadata.effective_traits,
+            metadata: self.metadata.to_builder(),
             member: Some(self.member),
         }
     }
@@ -107,8 +99,7 @@ pub struct MapShape {
 /// Builder for creating a map shape.
 #[derive(Debug, Default)]
 pub struct MapShapeBuilder {
-    id: Option<String>,
-    traits: TraitMap,
+    metadata: ShapeMetadataBuilder,
     key: Option<MemberShape>,
     value: Option<MemberShape>,
 }
@@ -121,7 +112,7 @@ impl MapShapeBuilder {
 
     /// Set the ID of the map shape.
     pub fn id(mut self, id: impl Into<String>) -> Self {
-        self.id = Some(id.into());
+        self.metadata = self.metadata.id(id);
         self
     }
 
@@ -141,10 +132,7 @@ impl MapShapeBuilder {
     pub fn build(self) -> Result<MapShape, BuildError> {
         use builder::{field_names, required_field_error};
 
-        let id_str = self
-            .id
-            .ok_or_else(|| required_field_error(field_names::ID))?;
-        let id = parse_shape_id(&id_str)?;
+        let metadata = self.metadata.build()?;
 
         let key = self
             .key
@@ -154,7 +142,7 @@ impl MapShapeBuilder {
             .ok_or_else(|| required_field_error(field_names::VALUE))?;
 
         Ok(MapShape {
-            metadata: ShapeMetadata::new(id, self.traits),
+            metadata,
             key,
             value,
         })
@@ -163,7 +151,7 @@ impl MapShapeBuilder {
 
 impl ProvideTraitsMut for MapShapeBuilder {
     fn traits_mut(&mut self) -> &mut TraitMap {
-        &mut self.traits
+        &mut self.metadata.introduced_traits
     }
 }
 
@@ -186,8 +174,7 @@ impl MapShape {
     /// Convert this shape back into a builder
     pub fn to_builder(self) -> MapShapeBuilder {
         MapShapeBuilder {
-            id: Some(self.metadata.id.to_string()),
-            traits: self.metadata.effective_traits,
+            metadata: self.metadata.to_builder(),
             key: Some(self.key),
             value: Some(self.value),
         }
@@ -205,8 +192,7 @@ pub struct SetShape {
 /// Builder for creating a set shape.
 #[derive(Debug, Default)]
 pub struct SetShapeBuilder {
-    id: Option<String>,
-    traits: TraitMap,
+    metadata: ShapeMetadataBuilder,
     member: Option<MemberShape>,
 }
 
@@ -218,7 +204,7 @@ impl SetShapeBuilder {
 
     /// Set the ID of the set shape.
     pub fn id(mut self, id: impl Into<String>) -> Self {
-        self.id = Some(id.into());
+        self.metadata = self.metadata.id(id);
         self
     }
 
@@ -232,25 +218,19 @@ impl SetShapeBuilder {
     pub fn build(self) -> Result<SetShape, BuildError> {
         use builder::{field_names, required_field_error};
 
-        let id_str = self
-            .id
-            .ok_or_else(|| required_field_error(field_names::ID))?;
-        let id = parse_shape_id(&id_str)?;
+        let metadata = self.metadata.build()?;
 
         let member = self
             .member
             .ok_or_else(|| required_field_error(field_names::MEMBER))?;
 
-        Ok(SetShape {
-            metadata: ShapeMetadata::new(id, self.traits),
-            member,
-        })
+        Ok(SetShape { metadata, member })
     }
 }
 
 impl ProvideTraitsMut for SetShapeBuilder {
     fn traits_mut(&mut self) -> &mut TraitMap {
-        &mut self.traits
+        &mut self.metadata.introduced_traits
     }
 }
 
@@ -268,8 +248,7 @@ impl SetShape {
     /// Convert this shape back into a builder
     pub fn to_builder(self) -> SetShapeBuilder {
         SetShapeBuilder {
-            id: Some(self.metadata.id.to_string()),
-            traits: self.metadata.effective_traits,
+            metadata: self.metadata.to_builder(),
             member: Some(self.member),
         }
     }
@@ -286,8 +265,7 @@ pub struct StructureShape {
 /// Builder for creating a structure shape.
 #[derive(Debug, Default)]
 pub struct StructureShapeBuilder {
-    id: Option<String>,
-    traits: TraitMap,
+    metadata: ShapeMetadataBuilder,
     members: HashMap<String, MemberShape>,
 }
 
@@ -299,7 +277,7 @@ impl StructureShapeBuilder {
 
     /// Set the ID of the structure shape.
     pub fn id(mut self, id: impl Into<String>) -> Self {
-        self.id = Some(id.into());
+        self.metadata = self.metadata.id(id);
         self
     }
 
@@ -325,13 +303,10 @@ impl StructureShapeBuilder {
     pub fn build(self) -> Result<StructureShape, BuildError> {
         use builder::{field_names, required_field_error};
 
-        let id_str = self
-            .id
-            .ok_or_else(|| required_field_error(field_names::ID))?;
-        let id = parse_shape_id(&id_str)?;
+        let metadata = self.metadata.build()?;
 
         Ok(StructureShape {
-            metadata: ShapeMetadata::new(id, self.traits),
+            metadata,
             members: self.members,
         })
     }
@@ -339,7 +314,7 @@ impl StructureShapeBuilder {
 
 impl ProvideTraitsMut for StructureShapeBuilder {
     fn traits_mut(&mut self) -> &mut TraitMap {
-        &mut self.traits
+        &mut self.metadata.introduced_traits
     }
 }
 
@@ -357,8 +332,7 @@ impl StructureShape {
     /// Convert this shape back into a builder
     pub fn to_builder(self) -> StructureShapeBuilder {
         StructureShapeBuilder {
-            id: Some(self.metadata.id.to_string()),
-            traits: self.metadata.effective_traits,
+            metadata: self.metadata.to_builder(),
             members: self.members,
         }
     }
@@ -375,8 +349,7 @@ pub struct UnionShape {
 /// Builder for creating a union shape.
 #[derive(Debug, Default)]
 pub struct UnionShapeBuilder {
-    id: Option<String>,
-    traits: TraitMap,
+    metadata: ShapeMetadataBuilder,
     members: HashMap<String, MemberShape>,
 }
 
@@ -388,7 +361,7 @@ impl UnionShapeBuilder {
 
     /// Set the ID of the union shape.
     pub fn id(mut self, id: impl Into<String>) -> Self {
-        self.id = Some(id.into());
+        self.metadata = self.metadata.id(id);
         self
     }
 
@@ -402,13 +375,10 @@ impl UnionShapeBuilder {
     pub fn build(self) -> Result<UnionShape, BuildError> {
         use builder::{field_names, required_field_error};
 
-        let id_str = self
-            .id
-            .ok_or_else(|| required_field_error(field_names::ID))?;
-        let id = parse_shape_id(&id_str)?;
+        let metadata = self.metadata.build()?;
 
         Ok(UnionShape {
-            metadata: ShapeMetadata::new(id, self.traits),
+            metadata,
             members: self.members,
         })
     }
@@ -416,7 +386,7 @@ impl UnionShapeBuilder {
 
 impl ProvideTraitsMut for UnionShapeBuilder {
     fn traits_mut(&mut self) -> &mut TraitMap {
-        &mut self.traits
+        &mut self.metadata.introduced_traits
     }
 }
 
@@ -434,8 +404,7 @@ impl UnionShape {
     /// Convert this shape back into a builder
     pub fn to_builder(self) -> UnionShapeBuilder {
         UnionShapeBuilder {
-            id: Some(self.metadata.id.to_string()),
-            traits: self.metadata.effective_traits,
+            metadata: self.metadata.to_builder(),
             members: self.members,
         }
     }
