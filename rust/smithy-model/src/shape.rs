@@ -5,12 +5,16 @@
 
 //! Shape types for the Smithy model.
 
+use operation::OperationShape;
+use resource::ResourceShape;
 use std::hash::{Hash, Hasher};
 
 mod aggregate;
 mod builder;
 mod error;
 mod member;
+mod operation;
+mod resource;
 mod service;
 mod simple;
 mod type_checks;
@@ -22,6 +26,8 @@ pub use self::aggregate::*;
 pub use self::builder::*;
 pub use self::error::*;
 pub use self::member::*;
+pub use self::operation::*;
+pub use self::resource::*;
 pub use self::service::*;
 pub use self::simple::*;
 

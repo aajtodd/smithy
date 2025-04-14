@@ -6,9 +6,11 @@
 //! Type checking methods for Smithy shapes.
 
 use crate::shape::member::MemberShape;
+use crate::shape::operation::OperationShape;
+use crate::shape::resource::ResourceShape;
 use crate::shape::{
     aggregate::{ListShape, MapShape, SetShape, StructureShape, UnionShape},
-    service::{OperationShape, ResourceShape, ServiceShape},
+    service::ServiceShape,
     simple::{
         BigDecimalShape, BigIntegerShape, BlobShape, BooleanShape, ByteShape, DoubleShape,
         FloatShape, IntegerShape, LongShape, ShortShape, StringShape, TimestampShape,
