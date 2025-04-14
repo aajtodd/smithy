@@ -8,9 +8,10 @@
 use crate::shape::{
     builder::{self, parse_shape_id, ProvideTraitsMut},
     error::BuildError,
-    MemberShape, ProvideShapeMetadata, Shape, ShapeMetadata, ShapeMetadataBuilder,
+    HasShapeId, HasTraits, MemberShape, ProvideShapeMetadata, Shape, ShapeMetadata,
+    ShapeMetadataBuilder,
 };
-use crate::traits::TraitMap;
+use crate::traits::{Trait, TraitMap};
 use std::collections::HashMap;
 
 /// A [list](https://smithy.io/2.0/spec/aggregate-types.html#list) shape
@@ -299,9 +300,64 @@ impl StructureShapeBuilder {
         self
     }
 
+    /// Add a mixin to the structure shape.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use smithy_model::shape::{StructureShape, Shape, HasMixins, HasShapeId, HasTraits};
+    /// use smithy_model::shape::ShapeBuilderExt;
+    /// use smithy_model::traits::{Mixin, Trait};
+    ///
+    /// let mixin = StructureShape::builder()
+    ///     .id("example.foo#MyMixin")
+    ///     .with_trait(Mixin::new())
+    ///     .build()
+    ///     .unwrap();
+    ///
+    /// let structure = StructureShape::builder()
+    ///     .id("example.foo#MyStructure")
+    ///     .mixin(mixin.clone())
+    ///     .build()
+    ///     .unwrap();
+    ///
+    /// assert_eq!(structure.mixins().len(), 1);
+    /// assert_eq!(structure.mixins()[0].id().to_string(), "example.foo#MyMixin");
+    /// ```
+    pub fn mixin(mut self, mixin: impl Into<Shape>) -> Self {
+        let mixin = mixin.into();
+
+        // Delegate to the metadata builder
+        self.metadata = self.metadata.with_mixin(mixin);
+        self
+    }
+
     /// Build the structure shape.
     pub fn build(self) -> Result<StructureShape, BuildError> {
+        use crate::traits::{Mixin, Trait};
         use builder::{field_names, required_field_error};
+
+        // Validate mixins before building
+        for mixin in self.metadata.mixins.iter() {
+            // Validate that the mixin has the @mixin trait
+            if !mixin.has_trait(Mixin::static_id()) {
+                return Err(BuildError::InvalidValue {
+                    field: "mixin".to_string(),
+                    reason: format!(
+                        "Shape {} is used as a mixin but does not have the @mixin trait",
+                        mixin.id()
+                    ),
+                });
+            }
+
+            // Validate that the mixin is a structure shape
+            if !matches!(mixin, Shape::Structure(_)) {
+                return Err(BuildError::InvalidValue {
+                    field: "mixin".to_string(),
+                    reason: format!("Mixin {} is not a structure shape", mixin.id()),
+                });
+            }
+        }
 
         let metadata = self.metadata.build()?;
 
@@ -475,7 +531,8 @@ impl From<UnionShape> for Shape {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::shape::HasShapeId;
+    use crate::shape::{HasMixins, HasShapeId, HasTraits, ShapeBuilderExt};
+    use crate::traits::{Mixin, Trait};
     use crate::ShapeId;
     // List shape tests
 
@@ -612,6 +669,78 @@ mod tests {
             members.get("age").unwrap().target.to_string(),
             "smithy.api#Integer"
         );
+    }
+
+    #[test]
+    fn test_structure_shape_with_mixin() {
+        // Create a mixin structure
+        let mixin = StructureShape::builder()
+            .id("example.foo#MyMixin")
+            .with_trait(Mixin::new())
+            .build()
+            .unwrap();
+
+        // Create a structure that uses the mixin
+        let shape = StructureShape::builder()
+            .id("example.foo#MyStructure")
+            .mixin(mixin.clone())
+            .build()
+            .unwrap();
+
+        assert_eq!(shape.id().to_string(), "example.foo#MyStructure");
+        assert_eq!(shape.mixins().len(), 1);
+        assert_eq!(shape.mixins()[0].id().to_string(), "example.foo#MyMixin");
+    }
+
+    #[test]
+    fn test_structure_shape_with_invalid_mixin() {
+        // Create a non-mixin structure
+        let non_mixin = StructureShape::builder()
+            .id("example.foo#NotAMixin")
+            .build()
+            .unwrap();
+
+        // Try to use it as a mixin
+        let result = StructureShape::builder()
+            .id("example.foo#MyStructure")
+            .mixin(non_mixin)
+            .build();
+
+        assert!(result.is_err());
+        match result {
+            Err(BuildError::InvalidValue { field, reason }) => {
+                assert_eq!(field, "mixin");
+                assert!(reason.contains("does not have the @mixin trait"));
+            }
+            _ => panic!("Expected InvalidValue error"),
+        }
+    }
+
+    #[test]
+    fn test_structure_shape_with_wrong_shape_type_mixin() {
+        use crate::shape::StringShape;
+
+        // Create a string shape with mixin trait
+        let string_mixin = StringShape::builder()
+            .id("example.foo#StringMixin")
+            .with_trait(Mixin::new())
+            .build()
+            .unwrap();
+
+        // Try to use it as a mixin for a structure
+        let result = StructureShape::builder()
+            .id("example.foo#MyStructure")
+            .mixin(string_mixin)
+            .build();
+
+        assert!(result.is_err());
+        match result {
+            Err(BuildError::InvalidValue { field, reason }) => {
+                assert_eq!(field, "mixin");
+                assert!(reason.contains("is not a structure shape"));
+            }
+            _ => panic!("Expected InvalidValue error"),
+        }
     }
 
     #[test]
