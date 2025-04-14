@@ -18,12 +18,14 @@ use crate::shape_id::ShapeId;
 mod deprecated;
 mod documentation;
 mod dynamic;
+mod mixin;
 mod registry;
 mod required;
 
 pub use deprecated::Deprecated;
 pub use documentation::Documentation;
 pub use dynamic::DynamicTrait;
+pub use mixin::Mixin;
 pub use registry::TraitRegistry;
 pub use required::Required;
 
