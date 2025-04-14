@@ -233,6 +233,41 @@ impl ShapeMetadataBuilder {
         self
     }
 
+    /// Validate that all mixins have the @mixin trait and are of the expected shape type
+    pub(crate) fn validate_mixins<F>(
+        &self,
+        shape_type_validator: F,
+        shape_type_name: &str,
+    ) -> Result<(), BuildError>
+    where
+        F: Fn(&Shape) -> bool,
+    {
+        use crate::traits::{Mixin, Trait};
+
+        for mixin in &self.mixins {
+            // Validate that the mixin has the @mixin trait
+            if !mixin.has_trait(Mixin::static_id()) {
+                return Err(BuildError::InvalidValue {
+                    field: field_names::MIXIN.to_string(),
+                    reason: format!(
+                        "Shape {} is used as a mixin but does not have the @mixin trait",
+                        mixin.id()
+                    ),
+                });
+            }
+
+            // Validate that the mixin is of the expected shape type
+            if !shape_type_validator(mixin) {
+                return Err(BuildError::InvalidValue {
+                    field: field_names::MIXIN.to_string(),
+                    reason: format!("Mixin {} is not a {} shape", mixin.id(), shape_type_name),
+                });
+            }
+        }
+
+        Ok(())
+    }
+
     /// Build the shape metadata
     pub(crate) fn build(self) -> Result<ShapeMetadata, BuildError> {
         use builder::{field_names, parse_shape_id, required_field_error};
