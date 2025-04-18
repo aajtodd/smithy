@@ -64,11 +64,16 @@
 9. **MIXIN-009: Update ResourceShapeBuilder for mixins**
    - Add `mixin` method to add a mixin to the builder
    - Update the `build` method to validate mixins
+   - Add `introduced_resources` field to track resources applied directly vs effective (including mixins)
+   - Add `introduced_operations` field to track operations applied directly vs effective (including mixins)
+   - Add missing `collection_operations` field 
    - Add unit tests for the updated builder
 
 10. **MIXIN-010: Update OperationShapeBuilder for mixins**
     - Add `mixin` method to add a mixin to the builder
+    - Add `introduced_errors` field to `OperationShape` to track resources applied directly to the operation shape vs effective (including mixins)
     - Update the `build` method to validate mixins
+      - Operation mixins cannot target anything other than the unit shape for input and output fields. 
     - Add unit tests for the updated builder
 
 11. **MIXIN-011: Update simple shape builders for mixins**
@@ -119,3 +124,7 @@
     - Optimize if necessary
     - Add benchmarks for mixin resolution
 
+#### Phase 5: Cleanup
+
+21. **MIXIN-021: Look for opportunities to commonize**
+    - Java uses an EntityShape and EntityShapeBuilder for shapes like service and resource that have common fields (operations, resources)
