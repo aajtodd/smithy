@@ -20,7 +20,8 @@ mod simple;
 mod type_checks;
 
 use crate::shape_id::ShapeId;
-use crate::traits::{BoxTrait, Trait, TraitMap};
+use crate::traits::{BoxTrait, Mixin, Required, Trait, TraitMap};
+use std::borrow::Cow;
 
 pub use self::aggregate::*;
 pub use self::builder::*;
@@ -290,11 +291,65 @@ impl ShapeMetadataBuilder {
             metadata.add_mixin(mixin);
         }
 
-        // TODO: Compute effective traits from mixins
-        // This will be implemented as part of the mixin resolution functions
+        // Compute effective traits from mixins
+        let effective_traits =
+            compute_effective_traits(&metadata.introduced_traits, &metadata.mixins);
+
+        // TODO: Consider changing effective_traits in ShapeMetadata to use Cow<'_, TraitMap>
+        // to avoid unnecessary cloning when there are no mixins
+        metadata.effective_traits = effective_traits.into_owned();
 
         Ok(metadata)
     }
+}
+
+/// Get traits from a mixin, excluding local traits and the mixin trait itself
+fn get_mixin_traits(mixin: &Shape) -> TraitMap {
+    let mut traits = mixin.introduced_traits().clone();
+
+    // Remove the @mixin trait
+    traits.remove(Mixin::static_id());
+
+    // Remove local traits
+    if let Some(mixin_trait) = mixin.get_trait_as::<Mixin>() {
+        for local_trait_id in &mixin_trait.local_traits {
+            traits.remove(local_trait_id);
+        }
+    }
+
+    traits
+}
+
+/// Compute effective traits for a shape, including those from mixins
+fn compute_effective_traits<'a>(
+    introduced_traits: &'a TraitMap,
+    mixins: &[Shape],
+) -> Cow<'a, TraitMap> {
+    // If there are no mixins, we can just return the introduced traits directly
+    if mixins.is_empty() {
+        return Cow::Borrowed(introduced_traits);
+    }
+
+    // Otherwise, we need to build a new trait map
+    let mut traits = TraitMap::new();
+
+    // Process mixins in order (first to last)
+    for mixin in mixins {
+        // Get traits from the mixin, excluding local traits
+        let mixin_traits = get_mixin_traits(mixin);
+
+        // Apply mixin traits (later mixins override earlier ones)
+        for (_, trait_obj) in mixin_traits.iter() {
+            traits.insert(trait_obj.clone_trait());
+        }
+    }
+
+    // Apply introduced traits (highest precedence)
+    for (_, trait_obj) in introduced_traits.iter() {
+        traits.insert(trait_obj.clone_trait());
+    }
+
+    Cow::Owned(traits)
 }
 
 /// Common metadata for all shapes (implementation detail)
@@ -377,7 +432,7 @@ impl Eq for ShapeMetadata {}
 mod tests {
     use super::*;
     use crate::shape::builder::ShapeBuilderExt;
-    use crate::traits::Documentation;
+    use crate::traits::{Documentation, Mixin};
     use std::collections::HashMap;
     use std::str::FromStr;
 
@@ -431,6 +486,92 @@ mod tests {
         assert_eq!(member.id().to_string(), "example.foo#MyStruct$name");
         assert_eq!(member.member_name, "name");
         assert_eq!(member.target, target);
+    }
+
+    #[test]
+    fn test_compute_effective_traits() {
+        // Create a mixin with traits
+        let mixin = StructureShape::builder()
+            .id("example.foo#MyMixin")
+            .documentation("Mixin documentation")
+            .as_mixin()
+            .build()
+            .unwrap();
+
+        // Create a shape with its own traits
+        let mut shape_traits = TraitMap::new();
+        shape_traits.insert(Box::new(Documentation("Shape documentation".to_string())));
+
+        // Test with no mixins
+        let effective_traits = compute_effective_traits(&shape_traits, &[]);
+        assert_eq!(effective_traits.len(), 1);
+        assert!(effective_traits.contains_key(Documentation::static_id()));
+
+        // Test with one mixin
+        let effective_traits = compute_effective_traits(&shape_traits, &[mixin.clone().into()]);
+        assert_eq!(effective_traits.len(), 1);
+        assert!(effective_traits.contains_key(Documentation::static_id()));
+
+        // Verify that shape traits take precedence over mixin traits
+        let doc = effective_traits.get(Documentation::static_id()).unwrap();
+        let doc = doc.as_any().downcast_ref::<Documentation>().unwrap();
+        assert_eq!(doc.0, "Shape documentation");
+
+        // Test with multiple mixins
+        let mixin2 = StructureShape::builder()
+            .id("example.foo#MyMixin2")
+            .with_trait(Required)
+            .as_mixin()
+            .build()
+            .unwrap();
+
+        let effective_traits =
+            compute_effective_traits(&shape_traits, &[mixin.clone().into(), mixin2.into()]);
+        assert_eq!(effective_traits.len(), 2);
+        assert!(effective_traits.contains_key(Documentation::static_id()));
+        assert!(effective_traits.contains_key(Required::static_id()));
+    }
+
+    #[test]
+    fn test_get_mixin_traits() {
+        // Create a mixin with traits
+        let mixin = StructureShape::builder()
+            .id("example.foo#MyMixin")
+            .documentation("Mixin documentation")
+            .required()
+            .as_mixin()
+            .build()
+            .unwrap();
+
+        // Get traits from the mixin
+        let traits = get_mixin_traits(&mixin.into());
+
+        // Verify that the mixin trait is removed
+        assert!(!traits.contains_key(Mixin::static_id()));
+
+        // Verify that other traits are preserved
+        assert!(traits.contains_key(Documentation::static_id()));
+        assert!(traits.contains_key(Required::static_id()));
+
+        // Test with local traits
+        let local_traits = vec![Documentation::static_id().clone()];
+        let mixin_with_local = StructureShape::builder()
+            .id("example.foo#MyMixin2")
+            .with_trait(Mixin::with_local_traits(local_traits))
+            .documentation("Local documentation")
+            .required()
+            .build()
+            .unwrap();
+
+        // Get traits from the mixin
+        let traits = get_mixin_traits(&mixin_with_local.into());
+
+        // Verify that the mixin trait and local traits are removed
+        assert!(!traits.contains_key(Mixin::static_id()));
+        assert!(!traits.contains_key(Documentation::static_id()));
+
+        // Verify that non-local traits are preserved
+        assert!(traits.contains_key(Required::static_id()));
     }
 
     // Core trait tests
