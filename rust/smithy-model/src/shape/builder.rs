@@ -44,6 +44,9 @@ pub(crate) fn parse_shape_id(id_str: &str) -> Result<ShapeId, BuildError> {
     })
 }
 
+// FIXME - all implementations of this are using the metadata introduced_traits but that is wrong, it needs all the
+// mixin traits to form the effective traits.
+
 /// Trait for accessing the traits container.
 pub trait ProvideTraitsMut {
     /// Get mutable access to the traits container.
@@ -137,13 +140,13 @@ pub trait ShapeBuilderExt: ProvideTraitsMut + Sized {
     ///
     /// let shape = StringShape::builder()
     ///     .id("example.foo#MyString")
-    ///     .mixin()
+    ///     .as_mixin()
     ///     .build()
     ///     .unwrap();
     ///
     /// assert!(shape.has_trait(Mixin::static_id()));
     /// ```
-    fn mixin(self) -> Self {
+    fn as_mixin(self) -> Self {
         self.with_trait(Mixin::new())
     }
 }
@@ -160,7 +163,7 @@ mod tests {
     fn test_mixin_builder_extension() {
         let shape = StringShape::builder()
             .id("example.foo#MyString")
-            .mixin()
+            .as_mixin()
             .build()
             .unwrap();
 

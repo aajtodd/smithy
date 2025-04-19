@@ -47,8 +47,18 @@ macro_rules! define_simple_shape {
                     self
                 }
 
+                /// Add a mixin to the $shape_name.
+                pub fn mixin(mut self, mixin: impl Into<Shape>) -> Self {
+                    self.metadata = self.metadata.with_mixin(mixin.into());
+                    self
+                }
+
                 /// Build the $shape_name.
                 pub fn build(self) -> Result<$shape_name, BuildError> {
+                    // Validate that mixins are of the same shape type
+                    self.metadata
+                        .validate_mixins(|shape| matches!(shape, Shape::$shape_variant(_)), stringify!($shape_variant))?;
+
                     let metadata = self.metadata.build()?;
 
                     Ok($shape_name {
@@ -188,8 +198,7 @@ pub struct EnumShape {
 /// Builder for creating an enum shape.
 #[derive(Debug, Default)]
 pub struct EnumShapeBuilder {
-    id: Option<String>,
-    traits: TraitMap,
+    metadata: ShapeMetadataBuilder,
     members: HashMap<String, MemberShape>,
 }
 
@@ -201,7 +210,7 @@ impl EnumShapeBuilder {
 
     /// Set the ID of the enum shape.
     pub fn id(mut self, id: impl Into<String>) -> Self {
-        self.id = Some(id.into());
+        self.metadata = self.metadata.id(id);
         self
     }
 
@@ -223,14 +232,22 @@ impl EnumShapeBuilder {
         self
     }
 
+    /// Add a mixin to the enum shape.
+    pub fn mixin(mut self, mixin: impl Into<Shape>) -> Self {
+        self.metadata = self.metadata.with_mixin(mixin.into());
+        self
+    }
+
     /// Build the enum shape.
     pub fn build(self) -> Result<EnumShape, BuildError> {
-        use builder::{field_names, required_field_error};
+        // Validate that mixins are of the same shape type
+        self.metadata
+            .validate_mixins(|shape| matches!(shape, Shape::Enum(_)), "enum")?;
 
-        let id_str = self
-            .id
-            .ok_or_else(|| required_field_error(field_names::ID))?;
-        let id = parse_shape_id(&id_str)?;
+        // TODO - handle mixin members and traits
+
+        // Build the metadata
+        let metadata = self.metadata.build()?;
 
         if self.members.is_empty() {
             return Err(BuildError::InvalidValue {
@@ -240,7 +257,7 @@ impl EnumShapeBuilder {
         }
 
         Ok(EnumShape {
-            metadata: ShapeMetadata::new(id, self.traits),
+            metadata,
             members: self.members,
         })
     }
@@ -248,7 +265,7 @@ impl EnumShapeBuilder {
 
 impl ProvideTraitsMut for EnumShapeBuilder {
     fn traits_mut(&mut self) -> &mut TraitMap {
-        &mut self.traits
+        &mut self.metadata.introduced_traits
     }
 }
 
@@ -260,11 +277,11 @@ impl EnumShape {
 
     /// Convert this shape back into a builder
     pub fn to_builder(self) -> EnumShapeBuilder {
-        EnumShapeBuilder {
-            id: Some(self.metadata.id.to_string()),
-            traits: self.metadata.effective_traits,
-            members: self.members,
-        }
+        let mut builder = EnumShapeBuilder::default();
+        builder.metadata = self.metadata.to_builder();
+        builder.members = self.members;
+
+        builder
     }
 }
 
@@ -293,13 +310,13 @@ pub struct IntEnumShape {
 /// Builder for creating an integer enum shape.
 #[derive(Debug, Default)]
 pub struct IntEnumShapeBuilder {
-    id: Option<String>,
-    traits: TraitMap,
+    metadata: ShapeMetadataBuilder,
     members: HashMap<String, MemberShape>,
     values: HashMap<String, i64>,
 }
 
 impl IntEnumShapeBuilder {
+    // FIXME - make all the ShapeBuilder new methods pub(crate) to force users through Shape::builder
     /// Create a new integer enum shape builder.
     pub fn new() -> Self {
         Self::default()
@@ -307,7 +324,7 @@ impl IntEnumShapeBuilder {
 
     /// Set the ID of the integer enum shape.
     pub fn id(mut self, id: impl Into<String>) -> Self {
-        self.id = Some(id.into());
+        self.metadata = self.metadata.id(id);
         self
     }
 
@@ -325,14 +342,24 @@ impl IntEnumShapeBuilder {
         self
     }
 
+    /// Add a mixin to the integer enum shape.
+    pub fn mixin(mut self, mixin: impl Into<Shape>) -> Self {
+        self.metadata = self.metadata.with_mixin(mixin.into());
+        self
+    }
+
     /// Build the integer enum shape.
     pub fn build(self) -> Result<IntEnumShape, BuildError> {
         use builder::{field_names, required_field_error};
 
-        let id_str = self
-            .id
-            .ok_or_else(|| required_field_error(field_names::ID))?;
-        let id = parse_shape_id(&id_str)?;
+        // Validate that mixins are of the same shape type
+        self.metadata
+            .validate_mixins(|shape| matches!(shape, Shape::IntEnum(_)), "intEnum")?;
+
+        // TODO - handle mixin members/values + traits
+
+        // Build the metadata
+        let metadata = self.metadata.build()?;
 
         if self.members.is_empty() {
             return Err(BuildError::InvalidValue {
@@ -353,7 +380,7 @@ impl IntEnumShapeBuilder {
         }
 
         Ok(IntEnumShape {
-            metadata: ShapeMetadata::new(id, self.traits),
+            metadata,
             members: self.members,
             values: self.values,
         })
@@ -362,7 +389,7 @@ impl IntEnumShapeBuilder {
 
 impl ProvideTraitsMut for IntEnumShapeBuilder {
     fn traits_mut(&mut self) -> &mut TraitMap {
-        &mut self.traits
+        &mut self.metadata.introduced_traits
     }
 }
 
@@ -374,12 +401,12 @@ impl IntEnumShape {
 
     /// Convert this shape back into a builder
     pub fn to_builder(self) -> IntEnumShapeBuilder {
-        IntEnumShapeBuilder {
-            id: Some(self.metadata.id.to_string()),
-            traits: self.metadata.effective_traits,
-            members: self.members,
-            values: self.values,
-        }
+        let mut builder = IntEnumShapeBuilder::default();
+        builder.metadata = self.metadata.to_builder();
+        builder.members = self.members;
+        builder.values = self.values;
+
+        builder
     }
 }
 
@@ -401,6 +428,7 @@ mod tests {
     use super::*;
     use crate::shape::builder::ShapeBuilderExt;
     use crate::shape::{HasShapeId, HasTraits};
+    use crate::traits::{Mixin, Required, Trait};
     use crate::ShapeId;
     use std::str::FromStr;
 
@@ -448,6 +476,50 @@ mod tests {
         assert_eq!(shape.id().to_string(), "example.foo#MyString");
         assert_eq!(shape.traits().len(), 1);
         assert!(shape.has_trait(ShapeId::from_str("smithy.api#documentation").unwrap()));
+    }
+
+    // FIXME - implement mixin support for simple shapes
+    #[ignore]
+    #[test]
+    fn test_simple_shape_with_mixins() {
+        // Create a mixin string shape with a pattern trait
+        let mixin = StringShape::builder()
+            .id("example.foo#PatternString")
+            .with_trait(Required)
+            .with_trait(Mixin::new())
+            .build()
+            .unwrap();
+
+        // Create a string shape that uses the mixin
+        let shape = StringShape::builder()
+            .id("example.foo#MyString")
+            .mixin(mixin)
+            .build()
+            .unwrap();
+
+        // The shape should inherit the pattern trait from the mixin
+        assert_eq!(shape.id().to_string(), "example.foo#MyString");
+        assert_eq!(shape.traits().len(), 1);
+        assert!(shape.has_trait(Required::static_id()));
+    }
+
+    #[test]
+    fn test_simple_shape_mixin_validation() {
+        // Create a boolean mixin
+        let boolean_mixin = BooleanShape::builder()
+            .id("example.foo#BooleanMixin")
+            .with_trait(Mixin::new())
+            .build()
+            .unwrap();
+
+        // Try to use a boolean mixin with a string shape - should fail
+        let result = StringShape::builder()
+            .id("example.foo#MyString")
+            .mixin(boolean_mixin)
+            .build();
+
+        assert!(result.is_err());
+        // TODO - do we want a better error for this?
     }
 
     // Enum shape tests
@@ -565,5 +637,95 @@ mod tests {
             }
             _ => panic!("Expected InvalidValue error"),
         }
+    }
+
+    // FIXME - implement mixin support for enum shapes
+    #[ignore]
+    #[test]
+    fn test_enum_shape_with_mixins() {
+        let unit_id = ShapeId::new("smithy.api", "Unit").unwrap();
+
+        // Create a mixin enum shape
+        let mixin = EnumShape::builder()
+            .id("example.foo#MixinEnum")
+            .member(
+                MemberShape::builder()
+                    .id("example.foo#MixinEnum$MIXIN_MEMBER")
+                    .member_name("MIXIN_MEMBER")
+                    .target(unit_id.clone())
+                    .build()
+                    .unwrap(),
+            )
+            .with_trait(Mixin::new())
+            .build()
+            .unwrap();
+
+        // Create an enum shape that uses the mixin
+        let shape = EnumShape::builder()
+            .id("example.foo#MyEnum")
+            .member(
+                MemberShape::builder()
+                    .id("example.foo#MyEnum$DIRECT_MEMBER")
+                    .member_name("DIRECT_MEMBER")
+                    .target(unit_id.clone())
+                    .build()
+                    .unwrap(),
+            )
+            .mixin(mixin)
+            .build()
+            .unwrap();
+
+        // The shape should have both its own member and the mixin member
+        assert_eq!(shape.id().to_string(), "example.foo#MyEnum");
+        assert_eq!(shape.members.len(), 2);
+        assert!(shape.members.contains_key("DIRECT_MEMBER"));
+        assert!(shape.members.contains_key("MIXIN_MEMBER"));
+    }
+
+    // FIXME - implement mixin support for intEnum shapes
+    #[ignore]
+    #[test]
+    fn test_int_enum_shape_with_mixins() {
+        let unit_id = ShapeId::new("smithy.api", "Unit").unwrap();
+
+        // Create a mixin int enum shape
+        let mixin = IntEnumShape::builder()
+            .id("example.foo#MixinIntEnum")
+            .member(
+                MemberShape::builder()
+                    .id("example.foo#MixinIntEnum$MIXIN_MEMBER")
+                    .member_name("MIXIN_MEMBER")
+                    .target(unit_id.clone())
+                    .build()
+                    .unwrap(),
+                1,
+            )
+            .with_trait(Mixin::new())
+            .build()
+            .unwrap();
+
+        // Create an int enum shape that uses the mixin
+        let shape = IntEnumShape::builder()
+            .id("example.foo#MyIntEnum")
+            .member(
+                MemberShape::builder()
+                    .id("example.foo#MyIntEnum$DIRECT_MEMBER")
+                    .member_name("DIRECT_MEMBER")
+                    .target(unit_id.clone())
+                    .build()
+                    .unwrap(),
+                2,
+            )
+            .mixin(mixin)
+            .build()
+            .unwrap();
+
+        // The shape should have both its own member and the mixin member
+        assert_eq!(shape.id().to_string(), "example.foo#MyIntEnum");
+        assert_eq!(shape.members.len(), 2);
+        assert!(shape.members.contains_key("DIRECT_MEMBER"));
+        assert!(shape.members.contains_key("MIXIN_MEMBER"));
+        assert_eq!(shape.values.get("DIRECT_MEMBER"), Some(&2));
+        assert_eq!(shape.values.get("MIXIN_MEMBER"), Some(&1));
     }
 }
