@@ -82,6 +82,9 @@
 
 #### Phase 3: Mixin Resolution Functions
 
+At this point we've mostly added support for being able to add mixins to a shape but we now have to fill in 
+actually consuming the mixin in each shape (applying traits, coping members, etc). 
+
 12. **MIXIN-012: Implement cycle detection**
     - Create a function to detect cycles in mixin references
     - Add unit tests for cycle detection

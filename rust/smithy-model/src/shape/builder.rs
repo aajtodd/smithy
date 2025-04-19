@@ -44,9 +44,6 @@ pub(crate) fn parse_shape_id(id_str: &str) -> Result<ShapeId, BuildError> {
     })
 }
 
-// FIXME - all implementations of this are using the metadata introduced_traits but that is wrong, it needs all the
-// mixin traits to form the effective traits.
-
 /// Trait for accessing the traits container.
 pub trait ProvideTraitsMut {
     /// Get mutable access to the traits container.
