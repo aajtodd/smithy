@@ -2,7 +2,7 @@ use crate::shape::{
     BuildError, HasShapeId, ProvideShapeMetadata, ProvideTraitsMut, ServiceShape, Shape,
     ShapeMetadata, ShapeMetadataBuilder,
 };
-use crate::traits::{Mixin, TraitMap};
+use crate::traits::{Mixin, Trait, TraitMap};
 use crate::{shape, ShapeId};
 use std::collections::HashMap;
 
@@ -26,6 +26,8 @@ pub struct ResourceShape {
     pub introduced_operations: Vec<ShapeId>,
     /// All operations that are part of this resource (including those from mixins)
     pub operations: Vec<ShapeId>,
+    /// Collection operations for this resource
+    pub collection_operations: Vec<ShapeId>,
     /// The resources directly defined on this resource (introduced resources)
     pub introduced_resources: Vec<ShapeId>,
     /// All resources that are part of this resource (including those from mixins)
@@ -49,6 +51,7 @@ impl ResourceShape {
         builder.delete = self.delete.clone();
         builder.list = self.list.clone();
         builder.introduced_operations = self.introduced_operations.clone();
+        builder.collection_operations = self.collection_operations.clone();
         builder.introduced_resources = self.introduced_resources.clone();
 
         builder
@@ -78,6 +81,7 @@ pub struct ResourceShapeBuilder {
     delete: Option<ShapeId>,
     list: Option<ShapeId>,
     introduced_operations: Vec<ShapeId>,
+    collection_operations: Vec<ShapeId>,
     introduced_resources: Vec<ShapeId>,
 }
 
@@ -135,9 +139,15 @@ impl ResourceShapeBuilder {
         self
     }
 
-    /// Add multiple operations to the resource.
-    pub fn operations(mut self, operations: Vec<ShapeId>) -> Self {
-        self.introduced_operations.extend(operations);
+    /// Add a collection operation to the resource.
+    pub fn collection_operation(mut self, operation: ShapeId) -> Self {
+        self.collection_operations.push(operation);
+        self
+    }
+
+    /// Add multiple collection operations to the resource.
+    pub fn collection_operations(mut self, operations: Vec<ShapeId>) -> Self {
+        self.collection_operations.extend(operations);
         self
     }
 
@@ -166,10 +176,8 @@ impl ResourceShapeBuilder {
             .validate_mixins(|shape| matches!(shape, Shape::Resource(_)), "resource")?;
         let metadata = self.metadata.build()?;
 
-        // FIXME - when we define the mixin trait use the static ID
         // Check if this is a mixin resource
-        let mixin_id = ShapeId::new_unchecked("smithy.api#mixin");
-        let is_mixin = metadata.effective_traits.contains_key(&mixin_id);
+        let is_mixin = metadata.effective_traits.contains_key(Mixin::static_id());
 
         // Resource mixins cannot have identifiers, CRUD operations, etc.
         if is_mixin {
@@ -226,6 +234,7 @@ impl ResourceShapeBuilder {
             list: self.list,
             introduced_operations: self.introduced_operations,
             operations,
+            collection_operations: self.collection_operations,
             introduced_resources: self.introduced_resources,
             resources,
         })
@@ -253,6 +262,7 @@ mod tests {
         let delete = ShapeId::new_unchecked("example.foo#DeleteItem");
         let list = ShapeId::new_unchecked("example.foo#ListItems");
         let child_resource = ShapeId::new_unchecked("example.foo#ItemPart");
+        let operation = ShapeId::new_unchecked("example.foo#GetItems");
         let collection_operation = ShapeId::new_unchecked("example.foo#BatchGetItems");
 
         let shape = ResourceShape::builder()
@@ -264,7 +274,8 @@ mod tests {
             .delete(delete.clone())
             .list(list.clone())
             .resource(child_resource.clone())
-            .operation(collection_operation.clone())
+            .operation(operation.clone())
+            .collection_operation(collection_operation.clone())
             .build()
             .unwrap();
 
@@ -281,14 +292,16 @@ mod tests {
         assert_eq!(shape.resources.len(), 1);
         assert!(shape.resources.contains(&child_resource));
         assert_eq!(shape.introduced_operations.len(), 1);
-        assert!(shape.introduced_operations.contains(&collection_operation));
+        assert!(shape.introduced_operations.contains(&operation));
         assert_eq!(shape.operations.len(), 1);
-        assert!(shape.operations.contains(&collection_operation));
+        assert!(shape.operations.contains(&operation));
+        assert_eq!(shape.collection_operations.len(), 1);
+        assert!(shape.collection_operations.contains(&collection_operation));
     }
 
     #[test]
     fn test_resource_shape_minimal() {
-        let identifier = ShapeId::new("example.foo", "ItemId").unwrap();
+        let identifier = ShapeId::new_unchecked("example.foo#ItemId");
 
         let shape = ResourceShape::builder()
             .id("example.foo#Item")
@@ -306,6 +319,7 @@ mod tests {
         assert_eq!(shape.resources.len(), 0);
         assert_eq!(shape.introduced_operations.len(), 0);
         assert_eq!(shape.operations.len(), 0);
+        assert_eq!(shape.collection_operations.len(), 0);
     }
 
     #[test]
@@ -343,12 +357,14 @@ mod tests {
         // Create a resource that uses the mixin
         let direct_op = ShapeId::new_unchecked("example.foo#DirectOp");
         let direct_res = ShapeId::new_unchecked("example.foo#DirectRes");
+        let direct_collection_op = ShapeId::new_unchecked("example.foo#DirectCollectionOp");
         let identifier = ShapeId::new_unchecked("example.foo#Id");
 
         let resource = ResourceShape::builder()
             .id("example.foo#Resource")
             .identifier("id", identifier)
             .operation(direct_op.clone())
+            .collection_operation(direct_collection_op.clone())
             .resource(direct_res.clone())
             .mixin(mixin)
             .build()
@@ -360,6 +376,10 @@ mod tests {
         assert_eq!(resource.operations.len(), 2);
         assert!(resource.operations.contains(&direct_op));
         assert!(resource.operations.contains(&mixin_op));
+        assert_eq!(resource.collection_operations.len(), 1);
+        assert!(resource
+            .collection_operations
+            .contains(&direct_collection_op));
         assert_eq!(resource.introduced_resources.len(), 1);
         assert!(resource.introduced_resources.contains(&direct_res));
         assert_eq!(resource.resources.len(), 2);

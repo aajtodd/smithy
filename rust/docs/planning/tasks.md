@@ -128,3 +128,4 @@
 
 21. **MIXIN-021: Look for opportunities to commonize**
     - Java uses an EntityShape and EntityShapeBuilder for shapes like service and resource that have common fields (operations, resources)
+    - We are taking `Vec<T>` in our builders in several places (e.g. ResourceShapeBuilder::collection_operations) we should be consistent and use `impl Into<Iter<Item=ShapeId>>` or simiilar
