@@ -282,24 +282,24 @@ impl ShapeMetadataBuilder {
         let id_str = self
             .id
             .ok_or_else(|| required_field_error(field_names::ID))?;
+
         let id = parse_shape_id(&id_str)?;
-
-        let mut metadata = ShapeMetadata::new(id, self.introduced_traits);
-
-        // Add mixins
-        for mixin in self.mixins {
-            metadata.add_mixin(mixin);
-        }
+        let introduced_traits = self.introduced_traits;
+        let mixins = self.mixins;
 
         // Compute effective traits from mixins
-        let effective_traits =
-            compute_effective_traits(&metadata.introduced_traits, &metadata.mixins);
+        let effective_traits = compute_effective_traits(&introduced_traits, &mixins);
 
         // TODO: Consider changing effective_traits in ShapeMetadata to use Cow<'_, TraitMap>
         // to avoid unnecessary cloning when there are no mixins
-        metadata.effective_traits = effective_traits.into_owned();
+        let effective_traits = effective_traits.into_owned();
 
-        Ok(metadata)
+        Ok(ShapeMetadata {
+            id,
+            introduced_traits,
+            effective_traits,
+            mixins,
+        })
     }
 }
 
