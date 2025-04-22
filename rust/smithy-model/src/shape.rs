@@ -5,10 +5,6 @@
 
 //! Shape types for the Smithy model.
 
-use operation::OperationShape;
-use resource::ResourceShape;
-use std::hash::{Hash, Hasher};
-
 mod aggregate;
 mod builder;
 mod error;
@@ -20,8 +16,9 @@ mod simple;
 mod type_checks;
 
 use crate::shape_id::ShapeId;
-use crate::traits::{BoxTrait, Mixin, Required, Trait, TraitMap};
+use crate::traits::{BoxTrait, Mixin, Trait, TraitMap};
 use std::borrow::Cow;
+use std::hash::{Hash, Hasher};
 
 pub use self::aggregate::*;
 pub use self::builder::*;
@@ -228,12 +225,6 @@ impl ShapeMetadataBuilder {
         self
     }
 
-    /// Add a trait to the shape
-    pub(crate) fn with_trait(mut self, trait_obj: impl Trait) -> Self {
-        self.introduced_traits.insert(Box::new(trait_obj));
-        self
-    }
-
     /// Add a mixin to the shape
     pub(crate) fn with_mixin(mut self, mixin: Shape) -> Self {
         self.mixins.push(mixin);
@@ -376,11 +367,6 @@ impl ShapeMetadata {
         }
     }
 
-    /// Add a mixin to this shape
-    pub(crate) fn add_mixin(&mut self, mixin: Shape) {
-        self.mixins.push(mixin);
-    }
-
     /// Convert this metadata to a builder
     pub(crate) fn to_builder(&self) -> ShapeMetadataBuilder {
         let mut builder = ShapeMetadataBuilder::new().id(self.id.to_string());
@@ -432,7 +418,7 @@ impl Eq for ShapeMetadata {}
 mod tests {
     use super::*;
     use crate::shape::builder::ShapeBuilderExt;
-    use crate::traits::{Documentation, Mixin};
+    use crate::traits::{Documentation, Mixin, Required};
     use std::collections::HashMap;
     use std::str::FromStr;
 
@@ -608,9 +594,9 @@ mod tests {
             let nonexistent = ShapeId::from_str("smithy.api#nonexistent").unwrap();
 
             // Test HasTraits methods
-            assert!(shape.has_trait(&trait_id));
-            assert!(shape.has_trait(&trait_id));
-            assert!(shape.get_trait(&trait_id).is_some());
+            assert!(shape.has_trait(trait_id));
+            assert!(shape.has_trait(trait_id));
+            assert!(shape.get_trait(trait_id).is_some());
             assert!(shape.get_trait(&nonexistent).is_none());
 
             assert!(shape.get_trait_as::<Documentation>().is_some());
@@ -621,7 +607,7 @@ mod tests {
 
             // Test introduced_traits
             assert_eq!(shape.introduced_traits().len(), 1);
-            assert!(shape.introduced_traits().contains_key(&trait_id));
+            assert!(shape.introduced_traits().contains_key(trait_id));
         }
 
         #[test]

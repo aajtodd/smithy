@@ -6,12 +6,11 @@
 //! Aggregate shape types for the Smithy model.
 
 use crate::shape::{
-    builder::{self, parse_shape_id, ProvideTraitsMut},
+    builder::{self, ProvideTraitsMut},
     error::BuildError,
-    HasShapeId, HasTraits, MemberShape, ProvideShapeMetadata, Shape, ShapeMetadata,
-    ShapeMetadataBuilder,
+    MemberShape, ProvideShapeMetadata, Shape, ShapeMetadata, ShapeMetadataBuilder,
 };
-use crate::traits::{Trait, TraitMap};
+use crate::traits::TraitMap;
 use std::collections::HashMap;
 
 /// A [list](https://smithy.io/2.0/spec/aggregate-types.html#list) shape
@@ -31,7 +30,7 @@ pub struct ListShapeBuilder {
 
 impl ListShapeBuilder {
     /// Create a new list shape builder.
-    pub fn new() -> Self {
+    fn new() -> Self {
         Self::default()
     }
 
@@ -107,7 +106,7 @@ pub struct MapShapeBuilder {
 
 impl MapShapeBuilder {
     /// Create a new map shape builder.
-    pub fn new() -> Self {
+    fn new() -> Self {
         Self::default()
     }
 
@@ -199,7 +198,7 @@ pub struct SetShapeBuilder {
 
 impl SetShapeBuilder {
     /// Create a new set shape builder.
-    pub fn new() -> Self {
+    fn new() -> Self {
         Self::default()
     }
 
@@ -272,7 +271,7 @@ pub struct StructureShapeBuilder {
 
 impl StructureShapeBuilder {
     /// Create a new structure shape builder.
-    pub fn new() -> Self {
+    fn new() -> Self {
         Self::default()
     }
 
@@ -390,7 +389,7 @@ pub struct UnionShapeBuilder {
 
 impl UnionShapeBuilder {
     /// Create a new union shape builder.
-    pub fn new() -> Self {
+    fn new() -> Self {
         Self::default()
     }
 
@@ -544,8 +543,8 @@ impl From<UnionShape> for Shape {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::shape::{HasMixins, HasShapeId, HasTraits, ShapeBuilderExt};
-    use crate::traits::{Mixin, Trait};
+    use crate::shape::{HasMixins, HasShapeId, ShapeBuilderExt};
+    use crate::traits::Mixin;
     use crate::ShapeId;
     // List shape tests
 

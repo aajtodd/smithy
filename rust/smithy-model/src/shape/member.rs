@@ -26,7 +26,7 @@ pub struct MemberShapeBuilder {
 
 impl MemberShapeBuilder {
     /// Create a new member shape builder.
-    pub fn new() -> Self {
+    fn new() -> Self {
         Self::default()
     }
 

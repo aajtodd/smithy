@@ -243,7 +243,7 @@ mod tests {
     #[derive(Clone, Debug)]
     struct TestTrait(String);
 
-    const TRAIT_ID: &'static ShapeId = &ShapeId::new_static("test", "testTrait");
+    const TRAIT_ID: &ShapeId = &ShapeId::new_static("test", "testTrait");
 
     impl Trait for TestTrait {
         fn static_id() -> &'static ShapeId {
@@ -286,14 +286,14 @@ mod tests {
         assert_eq!(map.len(), 1);
 
         // Test contains_key
-        assert!(map.contains_key(&trait_id));
+        assert!(map.contains_key(trait_id));
 
         // Test get
-        let retrieved = map.get(&trait_id).unwrap();
+        let retrieved = map.get(trait_id).unwrap();
         assert_eq!(retrieved.to_node(), Node::String("test".to_string()));
 
         // Test remove
-        let removed = map.remove(&trait_id).unwrap();
+        let removed = map.remove(trait_id).unwrap();
         assert_eq!(removed.to_node(), Node::String("test".to_string()));
         assert!(map.is_empty());
 
@@ -341,8 +341,8 @@ mod tests {
         let cloned = map.clone();
         assert_eq!(cloned.len(), map.len());
         assert_eq!(
-            cloned.get(&TestTrait::static_id()).unwrap().to_node(),
-            map.get(&TestTrait::static_id()).unwrap().to_node()
+            cloned.get(TestTrait::static_id()).unwrap().to_node(),
+            map.get(TestTrait::static_id()).unwrap().to_node()
         );
     }
 }

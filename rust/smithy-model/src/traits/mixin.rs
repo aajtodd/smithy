@@ -54,7 +54,7 @@ impl Mixin {
     }
 }
 
-const TRAIT_ID: &'static ShapeId = &ShapeId::new_static("smithy.api", "mixin");
+const TRAIT_ID: &ShapeId = &ShapeId::new_static("smithy.api", "mixin");
 
 impl Trait for Mixin {
     fn static_id() -> &'static ShapeId {

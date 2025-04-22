@@ -33,11 +33,11 @@ use std::any::Any;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Documentation(pub String);
 
-const TRAIT_ID: &'static ShapeId = &ShapeId::new_static("smithy.api", "documentation");
+const TRAIT_ID: &ShapeId = &ShapeId::new_static("smithy.api", "documentation");
 
 impl Trait for Documentation {
     fn static_id() -> &'static ShapeId {
-        &TRAIT_ID
+        TRAIT_ID
     }
 
     fn id(&self) -> &ShapeId {

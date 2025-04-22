@@ -1,6 +1,5 @@
 use crate::shape::{
-    BuildError, HasShapeId, ProvideShapeMetadata, ProvideTraitsMut, ServiceShape, Shape,
-    ShapeMetadata, ShapeMetadataBuilder,
+    BuildError, ProvideShapeMetadata, ProvideTraitsMut, Shape, ShapeMetadata, ShapeMetadataBuilder,
 };
 use crate::traits::{Mixin, Trait, TraitMap};
 use crate::{shape, ShapeId};
@@ -42,7 +41,7 @@ impl ResourceShape {
 
     /// Create a builder for this shape.
     pub fn to_builder(&self) -> ResourceShapeBuilder {
-        let mut builder = ResourceShapeBuilder::default();
+        let mut builder = ResourceShape::builder();
         builder.metadata = self.metadata.to_builder();
         builder.identifiers = self.identifiers.clone();
         builder.create = self.create.clone();
@@ -87,7 +86,7 @@ pub struct ResourceShapeBuilder {
 
 impl ResourceShapeBuilder {
     /// Create a new builder.
-    pub fn new() -> Self {
+    fn new() -> Self {
         Self::default()
     }
 

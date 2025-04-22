@@ -46,7 +46,7 @@ pub struct ServiceShapeBuilder {
 
 impl ServiceShapeBuilder {
     /// Create a new service shape builder.
-    pub fn new() -> Self {
+    fn new() -> Self {
         Self::default()
     }
 

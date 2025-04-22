@@ -6,9 +6,8 @@
 //! Simple shape types for the Smithy model.
 
 use crate::shape::{
-    builder::{self, parse_shape_id, ProvideTraitsMut},
-    error::BuildError,
-    MemberShape, ProvideShapeMetadata, Shape, ShapeMetadata, ShapeMetadataBuilder,
+    builder::ProvideTraitsMut, error::BuildError, MemberShape, ProvideShapeMetadata, Shape,
+    ShapeMetadata, ShapeMetadataBuilder,
 };
 use crate::traits::TraitMap;
 use paste::paste;
@@ -37,7 +36,7 @@ macro_rules! define_simple_shape {
 
             impl [<$shape_name Builder>] {
                 /// Create a new $shape_name builder.
-                pub fn new() -> Self {
+                pub(crate) fn new() -> Self {
                     Self::default()
                 }
 
@@ -204,7 +203,7 @@ pub struct EnumShapeBuilder {
 
 impl EnumShapeBuilder {
     /// Create a new enum shape builder.
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self::default()
     }
 
@@ -277,7 +276,7 @@ impl EnumShape {
 
     /// Convert this shape back into a builder
     pub fn to_builder(self) -> EnumShapeBuilder {
-        let mut builder = EnumShapeBuilder::default();
+        let mut builder = EnumShape::builder();
         builder.metadata = self.metadata.to_builder();
         builder.members = self.members;
 
@@ -316,9 +315,8 @@ pub struct IntEnumShapeBuilder {
 }
 
 impl IntEnumShapeBuilder {
-    // FIXME - make all the ShapeBuilder new methods pub(crate) to force users through Shape::builder
     /// Create a new integer enum shape builder.
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self::default()
     }
 
@@ -350,8 +348,6 @@ impl IntEnumShapeBuilder {
 
     /// Build the integer enum shape.
     pub fn build(self) -> Result<IntEnumShape, BuildError> {
-        use builder::{field_names, required_field_error};
-
         // Validate that mixins are of the same shape type
         self.metadata
             .validate_mixins(|shape| matches!(shape, Shape::IntEnum(_)), "intEnum")?;
@@ -401,7 +397,7 @@ impl IntEnumShape {
 
     /// Convert this shape back into a builder
     pub fn to_builder(self) -> IntEnumShapeBuilder {
-        let mut builder = IntEnumShapeBuilder::default();
+        let mut builder = IntEnumShape::builder();
         builder.metadata = self.metadata.to_builder();
         builder.members = self.members;
         builder.values = self.values;

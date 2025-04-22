@@ -130,7 +130,7 @@ mod tests {
         let id = Documentation::static_id();
         let node = Node::String("This is documentation".to_string());
 
-        let trait_ = registry.create_trait(&id, &node);
+        let trait_ = registry.create_trait(id, &node);
         let doc = trait_.as_any().downcast_ref::<Documentation>().unwrap();
         assert_eq!(doc.0, "This is documentation");
     }
@@ -163,7 +163,7 @@ mod tests {
         #[derive(Clone, Debug, PartialEq)]
         struct CustomTrait(String);
 
-        const TRAIT_ID: &'static ShapeId = &ShapeId::new_static("example", "customTrait");
+        const TRAIT_ID: &ShapeId = &ShapeId::new_static("example", "customTrait");
 
         impl Trait for CustomTrait {
             fn static_id() -> &'static ShapeId {
@@ -199,7 +199,7 @@ mod tests {
         let id = CustomTrait::static_id();
         let node = Node::String("custom value".to_string());
 
-        let trait_ = registry.create_trait(&id, &node);
+        let trait_ = registry.create_trait(id, &node);
         let custom = trait_.as_any().downcast_ref::<CustomTrait>().unwrap();
         assert_eq!(custom.0, "custom value");
     }

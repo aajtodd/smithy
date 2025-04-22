@@ -56,12 +56,12 @@ impl DynamicTrait {
     }
 }
 
-const TRAIT_ID: &'static ShapeId = &ShapeId::new_static("smithy.synthetic", "dynamic");
+const TRAIT_ID: &ShapeId = &ShapeId::new_static("smithy.synthetic", "dynamic");
 
 impl Trait for DynamicTrait {
     fn static_id() -> &'static ShapeId {
         // This is a placeholder - the actual ID is stored in the instance
-        &TRAIT_ID
+        TRAIT_ID
     }
 
     // Override the default implementation to return the instance-specific ID

@@ -1,6 +1,5 @@
 use crate::shape::{
-    builder::ShapeBuilderExt, BuildError, ProvideShapeMetadata, ProvideTraitsMut, Shape,
-    ShapeMetadata, ShapeMetadataBuilder,
+    BuildError, ProvideShapeMetadata, ProvideTraitsMut, Shape, ShapeMetadata, ShapeMetadataBuilder,
 };
 use crate::traits::{Mixin, Trait, TraitMap};
 use crate::ShapeId;
@@ -30,7 +29,7 @@ pub struct OperationShapeBuilder {
 
 impl OperationShapeBuilder {
     /// Create a new operation shape builder.
-    pub fn new() -> Self {
+    fn new() -> Self {
         Self::default()
     }
 
@@ -130,7 +129,7 @@ impl OperationShape {
 
     /// Create a builder from this shape.
     pub fn to_builder(&self) -> OperationShapeBuilder {
-        let mut builder = OperationShapeBuilder::default();
+        let mut builder = OperationShape::builder();
         builder.metadata = self.metadata.to_builder();
         builder.input = self.input.clone();
         builder.output = self.output.clone();
