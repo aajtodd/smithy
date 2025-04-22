@@ -278,12 +278,10 @@ impl ShapeMetadataBuilder {
         let introduced_traits = self.introduced_traits;
         let mixins = self.mixins;
 
+        // TODO - maybe use Arc<TraitMap> such that effective traits is cloned cheaply when
+        // mixins are not used since effective and introduced will be the same.
         // Compute effective traits from mixins
         let effective_traits = compute_effective_traits(&introduced_traits, &mixins);
-
-        // TODO: Consider changing effective_traits in ShapeMetadata to use Cow<'_, TraitMap>
-        // to avoid unnecessary cloning when there are no mixins
-        let effective_traits = effective_traits.into_owned();
 
         Ok(ShapeMetadata {
             id,
@@ -312,13 +310,10 @@ fn get_mixin_traits(mixin: &Shape) -> TraitMap {
 }
 
 /// Compute effective traits for a shape, including those from mixins
-fn compute_effective_traits<'a>(
-    introduced_traits: &'a TraitMap,
-    mixins: &[Shape],
-) -> Cow<'a, TraitMap> {
+fn compute_effective_traits(introduced_traits: &TraitMap, mixins: &[Shape]) -> TraitMap {
     // If there are no mixins, we can just return the introduced traits directly
     if mixins.is_empty() {
-        return Cow::Borrowed(introduced_traits);
+        return introduced_traits.clone();
     }
 
     // Otherwise, we need to build a new trait map
@@ -340,7 +335,7 @@ fn compute_effective_traits<'a>(
         traits.insert(trait_obj.clone_trait());
     }
 
-    Cow::Owned(traits)
+    traits
 }
 
 /// Common metadata for all shapes (implementation detail)
