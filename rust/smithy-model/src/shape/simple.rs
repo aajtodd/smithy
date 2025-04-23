@@ -352,7 +352,7 @@ impl IntEnumShapeBuilder {
         self.metadata
             .validate_mixins(|shape| matches!(shape, Shape::IntEnum(_)), "intEnum")?;
 
-        // TODO - handle mixin members/values + traits
+        // TODO - handle mixin members/values + traits, instead of storing values we should compute them from the enumValue trait
 
         // Build the metadata
         let metadata = self.metadata.build()?;

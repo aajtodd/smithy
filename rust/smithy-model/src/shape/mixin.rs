@@ -8,11 +8,12 @@
 use crate::shape::error::BuildError;
 use crate::shape::iter::Members;
 use crate::shape::{
-    builder, HasMixins, HasShapeId, HasTraits, MemberShape, ProvideTraitsMut, Shape, ShapeId,
+    HasMixins, HasShapeId, HasTraits, MemberShape, ProvideTraitsMut, Shape, ShapeId,
 };
 use std::collections::HashMap;
 
 // FIXME - provide a unified way for builders to add/clear mixins. It's all adhoc right now.
+// FIXME - unify "named member" builders as well for adding/removing members?
 
 /// Computes effective members for a shape, including those from mixins.
 ///
@@ -88,7 +89,19 @@ fn process_local_member(
     computed_members: &mut HashMap<String, MemberShape>,
 ) -> Result<(), BuildError> {
     // Validate that the local member doesn't conflict with the mixin member
-    validate_member_targets(name, local_member, mixin_member)?;
+    if local_member.target() != mixin_member.target() {
+        return Err(BuildError::InvalidValue {
+            field: name.to_string(),
+            reason: format!(
+                "Member conflict: member '{}' in shape '{}' targets '{}', but the same member in mixin shape '{}' targets '{}'. Members with the same name must target the same shape.",
+                name,
+                local_member.id().without_member(),
+                local_member.target(),
+                mixin_member.id().without_member(),
+                mixin_member.target()
+            ),
+        });
+    }
 
     // Check if the local member needs to be rebuilt with mixin information
     // This matches the Java logic: if the member has no mixins or doesn't contain this mixin.
@@ -111,26 +124,6 @@ fn process_local_member(
     }
 
     Ok(())
-}
-
-fn validate_member_targets(
-    name: &str,
-    local_member: &MemberShape,
-    mixin_member: &MemberShape,
-) -> Result<(), BuildError> {
-    if local_member.target() != mixin_member.target() {
-        Err(BuildError::InvalidValue {
-            field: builder::field_names::MEMBER.to_string(),
-            reason: format!(
-                "Member {} conflicts with an inherited mixin member: {} vs {}",
-                name,
-                local_member.target(),
-                mixin_member.target()
-            ),
-        })
-    } else {
-        Ok(())
-    }
 }
 
 /// Rebuilds a member's mixins to ensure it properly tracks all mixin origins.
@@ -170,7 +163,19 @@ fn process_existing_mixin_member(
     computed_members: &mut HashMap<String, MemberShape>,
 ) -> Result<(), BuildError> {
     // Validate that the members don't conflict
-    validate_member_targets(name, &previous, mixin_member)?;
+    if previous.target() != mixin_member.target() {
+        return Err(BuildError::InvalidValue {
+            field: name.to_string(),
+            reason: format!(
+                "Mixin conflict: member '{}' from mixin '{}' targets '{}', but the same member from mixin '{}' targets '{}'. Members with the same name across mixins must target the same shape.",
+                name,
+                previous.id().without_member(),
+                previous.target(),
+                mixin_member.id().without_member(),
+                mixin_member.target()
+            ),
+        });
+    }
 
     // Add this mixin member to the existing member's mixins and merge traits
     let mut builder = previous.to_builder();
@@ -215,7 +220,7 @@ mod tests {
     use crate::shape::{MemberShape, StructureShape};
     use crate::traits::Documentation;
     use crate::traits::Required;
-    use crate::traits::{Trait, TraitMap};
+    use crate::traits::Trait;
     use std::collections::HashMap;
 
     // Helper function to create a test structure shape with the given ID and members
@@ -400,8 +405,8 @@ mod tests {
 
         assert!(result.is_err());
         if let Err(BuildError::InvalidValue { field, reason }) = result {
-            assert_eq!(field, "member");
-            assert!(reason.contains("conflicts with an inherited mixin member"));
+            assert_eq!(field, "conflict");
+            assert!(reason.contains("Mixin conflict: member 'conflict' from mixin 'example#Test' targets 'smithy.api#String', but the same member from mixin 'example#Mixin2' targets 'smithy.api#Integer'"), "reason={}", reason)
         } else {
             panic!("Expected InvalidValue error");
         }
@@ -434,8 +439,8 @@ mod tests {
 
         assert!(result.is_err());
         if let Err(BuildError::InvalidValue { field, reason }) = result {
-            assert_eq!(field, "member");
-            assert!(reason.contains("conflicts with an inherited mixin member"));
+            assert_eq!(field, "conflict");
+            assert!(reason.contains("Member conflict: member 'conflict' in shape 'example#Test' targets 'smithy.api#Integer', but the same member in mixin shape 'example#Mixin' targets 'smithy.api#String'"), "reason={}", reason);
         } else {
             panic!("Expected InvalidValue error");
         }

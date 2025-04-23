@@ -271,6 +271,15 @@ impl ShapeId {
             member: Some(member),
         })
     }
+
+    /// Create a new ShapeId with no member
+    pub fn without_member(&self) -> ShapeId {
+        ShapeId {
+            namespace: self.namespace.clone(),
+            name: self.name.clone(),
+            member: None,
+        }
+    }
 }
 
 impl fmt::Display for ShapeId {
