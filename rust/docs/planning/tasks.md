@@ -132,3 +132,4 @@ actually consuming the mixin in each shape (applying traits, coping members, etc
 21. **MIXIN-021: Look for opportunities to commonize**
     - Java uses an EntityShape and EntityShapeBuilder for shapes like service and resource that have common fields (operations, resources)
     - We are taking `Vec<T>` in our builders in several places (e.g. ResourceShapeBuilder::collection_operations) we should be consistent and use `impl Into<Iter<Item=ShapeId>>` or simiilar
+    - Missing `to_builder()` for some of our shapes e.g. StructureShape and possibly others
