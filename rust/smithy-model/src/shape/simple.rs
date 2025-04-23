@@ -6,10 +6,10 @@
 //! Simple shape types for the Smithy model.
 
 use crate::shape::{
-    builder::ProvideTraitsMut, error::BuildError, MemberShape, ProvideShapeMetadata, Shape,
-    ShapeMetadata, ShapeMetadataBuilder,
+    builder::ProvideTraitsMut, error::BuildError, mixin, HasTraits, MemberShape,
+    ProvideShapeMetadata, Shape, ShapeBuilderExt, ShapeMetadata, ShapeMetadataBuilder,
 };
-use crate::traits::TraitMap;
+use crate::traits::{type_refinement::EnumValue, TraitMap};
 use paste::paste;
 use std::collections::HashMap;
 use std::hash::Hash;
@@ -243,22 +243,19 @@ impl EnumShapeBuilder {
         self.metadata
             .validate_mixins(|shape| matches!(shape, Shape::Enum(_)), "enum")?;
 
-        // TODO - handle mixin members and traits
-
         // Build the metadata
         let metadata = self.metadata.build()?;
 
-        if self.members.is_empty() {
+        let members = mixin::compute_effective_members(self.members, &metadata)?;
+
+        if members.is_empty() {
             return Err(BuildError::InvalidValue {
                 field: "members".to_string(),
                 reason: "Enum shape must have at least one member".to_string(),
             });
         }
 
-        Ok(EnumShape {
-            metadata,
-            members: self.members,
-        })
+        Ok(EnumShape { metadata, members })
     }
 }
 
@@ -311,7 +308,6 @@ pub struct IntEnumShape {
 pub struct IntEnumShapeBuilder {
     metadata: ShapeMetadataBuilder,
     members: HashMap<String, MemberShape>,
-    values: HashMap<String, i64>,
 }
 
 impl IntEnumShapeBuilder {
@@ -334,9 +330,12 @@ impl IntEnumShapeBuilder {
         //         "intEnum members may only target `smithy.api#Unit`, but found `%s`",
         //         member.getTarget()), getSourceLocation());
         // }
-        let name_str = member.member_name.clone();
-        self.members.insert(name_str.clone(), member);
-        self.values.insert(name_str, value);
+        let member = member
+            .to_builder()
+            .with_trait(EnumValue::new_int(value))
+            .build()
+            .unwrap();
+        self.members.insert(member.member_name.clone(), member);
         self
     }
 
@@ -352,12 +351,44 @@ impl IntEnumShapeBuilder {
         self.metadata
             .validate_mixins(|shape| matches!(shape, Shape::IntEnum(_)), "intEnum")?;
 
-        // TODO - handle mixin members/values + traits, instead of storing values we should compute them from the enumValue trait
-
         // Build the metadata
         let metadata = self.metadata.build()?;
+        let members = mixin::compute_effective_members(self.members, &metadata)?;
 
-        if self.members.is_empty() {
+        // compute the values
+        let values: HashMap<String, i64> = members
+            .iter()
+            .map(|(name, member)| {
+                // Check if the member has the EnumValue trait
+                let enum_value =
+                    member
+                        .get_trait_as::<EnumValue>()
+                        .ok_or_else(|| BuildError::InvalidValue {
+                            field: name.clone(),
+                            reason: "intEnum shape Members must have the EnumValue trait"
+                                .to_string(),
+                        })?;
+
+                // Parse the enum value as an i64
+                let int_value =
+                    enum_value
+                        .0
+                        .parse::<i64>()
+                        .map_err(|_| BuildError::InvalidValue {
+                            field: name.clone(),
+                            reason: format!(
+                                "EnumValue '{}' could not be parsed as an integer",
+                                enum_value.0
+                            ),
+                        })?;
+
+                // Return the name and parsed value
+                Ok((name.clone(), int_value))
+            })
+            .collect::<Result<HashMap<String, i64>, BuildError>>()?;
+
+        // Validate that we have at least one member after merging
+        if members.is_empty() {
             return Err(BuildError::InvalidValue {
                 field: "members".to_string(),
                 reason: "Integer enum shape must have at least one member".to_string(),
@@ -366,19 +397,23 @@ impl IntEnumShapeBuilder {
 
         // Check for duplicate values
         let mut seen_values = std::collections::HashSet::new();
-        for &value in self.values.values() {
+        for (name, &value) in values.iter() {
             if !seen_values.insert(value) {
                 return Err(BuildError::InvalidValue {
-                    field: "values".to_string(),
-                    reason: format!("Duplicate integer value: {}", value),
+                    field: name.to_string(),
+                    reason: format!(
+                        "Duplicate integer value: {} found for intEnum member",
+                        value
+                    ),
                 });
             }
         }
 
+        // FIXME - we aren't keeping track of introduced members vs those from mixins here
         Ok(IntEnumShape {
             metadata,
-            members: self.members,
-            values: self.values,
+            members,
+            values,
         })
     }
 }
@@ -400,8 +435,6 @@ impl IntEnumShape {
         let mut builder = IntEnumShape::builder();
         builder.metadata = self.metadata.to_builder();
         builder.members = self.members;
-        builder.values = self.values;
-
         builder
     }
 }
@@ -628,7 +661,7 @@ mod tests {
         assert!(result.is_err());
         match result {
             Err(BuildError::InvalidValue { field, reason }) => {
-                assert_eq!(field, "values");
+                assert_eq!(field, "FIRST");
                 assert!(reason.contains("Duplicate integer value: 1"));
             }
             _ => panic!("Expected InvalidValue error"),

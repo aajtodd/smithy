@@ -8,7 +8,7 @@
 use crate::shape::error::BuildError;
 use crate::shape::iter::Members;
 use crate::shape::{
-    HasMixins, HasShapeId, HasTraits, MemberShape, ProvideTraitsMut, Shape, ShapeId,
+    HasMixins, HasShapeId, HasTraits, MemberShape, ProvideTraitsMut, Shape, ShapeId, ShapeMetadata,
 };
 use std::collections::HashMap;
 
@@ -20,6 +20,18 @@ use std::collections::HashMap;
 /// This function merges members from mixins with locally defined members,
 /// following the Smithy specification rules for member inheritance and trait precedence.
 pub(crate) fn compute_effective_members(
+    introduced_members: HashMap<String, MemberShape>,
+    metadata: &ShapeMetadata,
+) -> Result<HashMap<String, MemberShape>, BuildError> {
+    if !metadata.mixins.is_empty() {
+        let local_members = Members::map(&introduced_members);
+        compute_effective_members_impl(&metadata.id, &local_members, &metadata.mixins)
+    } else {
+        Ok(introduced_members)
+    }
+}
+
+fn compute_effective_members_impl(
     shape_id: &ShapeId,
     introduced_members: &Members<'_>,
     mixins: &[Shape],
@@ -276,7 +288,8 @@ mod tests {
         let members = Members::map(&structure.members);
 
         // Compute effective members
-        let effective_members = compute_effective_members(structure.id(), &members, &[]).unwrap();
+        let effective_members =
+            compute_effective_members_impl(structure.id(), &members, &[]).unwrap();
 
         // Verify that the effective members match the original members
         assert_eq!(effective_members.len(), 2);
@@ -306,7 +319,7 @@ mod tests {
 
         // Compute effective members
         let effective_members =
-            compute_effective_members(structure.id(), &members, &[mixin.into()]).unwrap();
+            compute_effective_members_impl(structure.id(), &members, &[mixin.into()]).unwrap();
 
         // Verify that the effective members include both mixin and local members
         assert_eq!(effective_members.len(), 2);
@@ -348,9 +361,12 @@ mod tests {
         let members = Members::map(&structure.members);
 
         // Compute effective members
-        let effective_members =
-            compute_effective_members(structure.id(), &members, &[mixin1.into(), mixin2.into()])
-                .unwrap();
+        let effective_members = compute_effective_members_impl(
+            structure.id(),
+            &members,
+            &[mixin1.into(), mixin2.into()],
+        )
+        .unwrap();
 
         // Verify that the effective members include all members
         assert_eq!(effective_members.len(), 3);
@@ -400,8 +416,11 @@ mod tests {
         let members = Members::map(&structure.members);
 
         // Compute effective members - should fail due to conflict
-        let result =
-            compute_effective_members(structure.id(), &members, &[mixin1.into(), mixin2.into()]);
+        let result = compute_effective_members_impl(
+            structure.id(),
+            &members,
+            &[mixin1.into(), mixin2.into()],
+        );
 
         assert!(result.is_err());
         if let Err(BuildError::InvalidValue { field, reason }) = result {
@@ -431,7 +450,7 @@ mod tests {
         let members = Members::map(&structure_members);
 
         // Compute effective members - should fail due to conflict
-        let result = compute_effective_members(
+        let result = compute_effective_members_impl(
             &ShapeId::new_unchecked("example#Test"),
             &members,
             &[mixin.into()],
@@ -470,7 +489,7 @@ mod tests {
 
         // Compute effective members
         let effective_members =
-            compute_effective_members(structure.id(), &members, &[mixin.into()]).unwrap();
+            compute_effective_members_impl(structure.id(), &members, &[mixin.into()]).unwrap();
 
         // Verify that the effective member inherited the trait
         assert!(effective_members.contains_key("member"));
@@ -521,7 +540,7 @@ mod tests {
         let members = Members::map(&structure_members);
 
         // Compute effective members
-        let effective_members = compute_effective_members(
+        let effective_members = compute_effective_members_impl(
             &ShapeId::new_unchecked("example#Test"),
             &members,
             &[mixin.into()],
@@ -581,9 +600,12 @@ mod tests {
         let members = Members::map(&structure.members);
 
         // Compute effective members
-        let effective_members =
-            compute_effective_members(structure.id(), &members, &[mixin1.into(), mixin2.into()])
-                .unwrap();
+        let effective_members = compute_effective_members_impl(
+            structure.id(),
+            &members,
+            &[mixin1.into(), mixin2.into()],
+        )
+        .unwrap();
 
         // Verify that the member has traits from both mixins
         assert!(effective_members.contains_key("member"));

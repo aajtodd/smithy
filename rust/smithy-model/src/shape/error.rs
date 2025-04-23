@@ -8,6 +8,8 @@
 use std::error::Error;
 use std::fmt;
 
+// FIXME - our errors should really include shape ID most of the time probably
+
 /// Error type for shape building operations.
 #[derive(Debug)]
 pub enum BuildError {

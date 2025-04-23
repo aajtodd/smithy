@@ -9,7 +9,7 @@ use crate::shape::{
     builder::{self, ProvideTraitsMut},
     error::BuildError,
     iter::Members,
-    MemberShape, ProvideShapeMetadata, Shape, ShapeMetadata, ShapeMetadataBuilder,
+    mixin, MemberShape, ProvideShapeMetadata, Shape, ShapeMetadata, ShapeMetadataBuilder,
 };
 use crate::traits::TraitMap;
 use std::collections::HashMap;
@@ -363,11 +363,9 @@ impl StructureShapeBuilder {
             .validate_mixins(|shape| matches!(shape, Shape::Structure(_)), "structure")?;
 
         let metadata = self.metadata.build()?;
+        let members = mixin::compute_effective_members(self.members, &metadata)?;
 
-        Ok(StructureShape {
-            metadata,
-            members: self.members,
-        })
+        Ok(StructureShape { metadata, members })
     }
 }
 
@@ -469,11 +467,9 @@ impl UnionShapeBuilder {
             .validate_mixins(|shape| matches!(shape, Shape::Union(_)), "union")?;
 
         let metadata = self.metadata.build()?;
+        let members = mixin::compute_effective_members(self.members, &metadata)?;
 
-        Ok(UnionShape {
-            metadata,
-            members: self.members,
-        })
+        Ok(UnionShape { metadata, members })
     }
 }
 

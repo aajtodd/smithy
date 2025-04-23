@@ -21,6 +21,7 @@ mod dynamic;
 mod mixin;
 mod registry;
 mod required;
+pub mod type_refinement;
 
 pub use deprecated::Deprecated;
 pub use documentation::Documentation;

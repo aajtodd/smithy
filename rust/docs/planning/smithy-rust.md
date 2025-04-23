@@ -54,6 +54,11 @@ Key files:
 
 Subdirectories:
 * src/shape/ - Contains implementations of specific shape types
+  * `aggregate.rs` - list, set, map, structure, and union shapes
+  * `simple.rs` - All simple smithy shape types
+  * `service.rs` - Service shape
+  * `operation.rs` - Operation shape
+  * `resource.rs` - resource shape
 * src/traits/ - Contains implementations of specific trait types
 
 ### Smithy AST (smithy-ast/)
