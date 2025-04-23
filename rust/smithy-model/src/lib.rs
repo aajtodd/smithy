@@ -31,7 +31,8 @@ pub use error::{Error, Result};
 // TODO - define our prelude
 
 // TODO - unit type
-// TODO - mixins, apply statement, etc
+// TODO - define macro(s) for common trait types like annotation, or single string/value
+// TODO - organize traits into modules based on spec (e.g. constraint, refine, behavior, resource, etc)
 // TODO - resources are likely needing attention
 // TODO - can probably commonize service/resource shapes (e.g. Java EntityShape(Builder))
 // TODO - define model (container) APIs

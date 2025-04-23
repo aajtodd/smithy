@@ -8,6 +8,7 @@
 use crate::shape::{
     builder::{self, ProvideTraitsMut},
     error::BuildError,
+    iter::Members,
     MemberShape, ProvideShapeMetadata, Shape, ShapeMetadata, ShapeMetadataBuilder,
 };
 use crate::traits::TraitMap;
@@ -75,6 +76,11 @@ impl ListShape {
     /// Returns the member shape for this list shape.
     pub fn member(&self) -> &MemberShape {
         &self.member
+    }
+
+    /// Returns a Members container for this list shape.
+    pub fn members(&self) -> Members<'_> {
+        Members::single(builder::field_names::MEMBER, &self.member)
     }
 
     /// Convert this shape back into a builder
@@ -171,6 +177,11 @@ impl MapShape {
         &self.key
     }
 
+    /// Returns a Members container for this map shape.
+    pub fn members(&self) -> Members<'_> {
+        Members::key_value(&self.key, &self.value)
+    }
+
     /// Convert this shape back into a builder
     pub fn to_builder(self) -> MapShapeBuilder {
         MapShapeBuilder {
@@ -243,6 +254,11 @@ impl SetShape {
     /// Returns the member shape for this set shape.
     pub fn member(&self) -> &MemberShape {
         &self.member
+    }
+
+    /// Returns a Members container for this set shape.
+    pub fn members(&self) -> Members<'_> {
+        Members::single(builder::field_names::MEMBER, &self.member)
     }
 
     /// Convert this shape back into a builder
@@ -358,9 +374,9 @@ impl StructureShape {
         StructureShapeBuilder::new()
     }
 
-    /// Returns all member shapes for this structure
-    pub fn members(&self) -> &HashMap<String, MemberShape> {
-        &self.members
+    /// Returns a Members container for this structure shape.
+    pub fn members(&self) -> Members<'_> {
+        Members::map(&self.members)
     }
 
     /// Convert this shape back into a builder
@@ -464,9 +480,9 @@ impl UnionShape {
         UnionShapeBuilder::new()
     }
 
-    /// Returns all member shapes for this union
-    pub fn members(&self) -> &HashMap<String, MemberShape> {
-        &self.members
+    /// Returns a Members container for this union shape.
+    pub fn members(&self) -> Members<'_> {
+        Members::map(&self.members)
     }
 
     /// Convert this shape back into a builder

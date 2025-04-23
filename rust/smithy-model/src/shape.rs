@@ -8,6 +8,7 @@
 mod aggregate;
 mod builder;
 mod error;
+pub mod iter;
 mod member;
 mod operation;
 mod resource;
@@ -17,7 +18,7 @@ mod type_checks;
 
 use crate::shape_id::ShapeId;
 use crate::traits::{BoxTrait, Mixin, Trait, TraitMap};
-use std::borrow::Cow;
+use iter::Members;
 use std::hash::{Hash, Hasher};
 
 pub use self::aggregate::*;
@@ -120,6 +121,21 @@ impl ProvideShapeMetadata for Shape {
             Shape::Operation(shape) => shape.meta(),
             Shape::Resource(shape) => shape.meta(),
             Shape::Member(shape) => shape.meta(),
+        }
+    }
+}
+
+// Implement members() method for Shape
+impl Shape {
+    /// Returns a Members container for this shape.
+    pub fn members(&self) -> Members<'_> {
+        match self {
+            Shape::Structure(shape) => shape.members(),
+            Shape::Union(shape) => shape.members(),
+            Shape::List(shape) => shape.members(),
+            Shape::Set(shape) => shape.members(),
+            Shape::Map(shape) => shape.members(),
+            _ => Members::empty(),
         }
     }
 }
