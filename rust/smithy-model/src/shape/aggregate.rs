@@ -303,6 +303,15 @@ impl StructureShapeBuilder {
         self
     }
 
+    /// Replace the members on the structure
+    pub fn members(mut self, members: impl IntoIterator<Item = MemberShape>) -> Self {
+        self.members.clear();
+        for member in members.into_iter() {
+            self.members.insert(member.member_name.clone(), member);
+        }
+        self
+    }
+
     /// Remove a member by name from the structure shape (if it exists)
     pub fn remove_member(mut self, member_name: impl AsRef<str>) -> Self {
         self.members.remove(member_name.as_ref());

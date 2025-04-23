@@ -5,8 +5,10 @@
 
 //! Iterator types for working with shapes.
 
-use crate::shape::MemberShape;
+use crate::shape::{HasShapeId, MemberShape, Shape};
+use crate::ShapeId;
 use std::collections::HashMap;
+use std::ops::Index;
 
 /// A container for accessing the members of a shape.
 ///
@@ -336,6 +338,76 @@ impl<'a> Iterator for NamedIter<'a> {
             },
             NamedIterImpl::Empty => None,
         }
+    }
+}
+
+/// A container for accessing mixins in a shape.
+pub struct Mixins<'a> {
+    mixins: &'a Vec<Shape>,
+}
+
+impl<'a> Mixins<'a> {
+    /// Create a new Mixins container from a slice of shapes.
+    pub(crate) fn new(mixins: &'a Vec<Shape>) -> Self {
+        Self { mixins }
+    }
+
+    /// Returns the number of mixins.
+    #[inline]
+    pub fn len(&self) -> usize {
+        self.mixins.len()
+    }
+
+    /// Returns true if there are no mixins.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        self.mixins.is_empty()
+    }
+
+    /// Returns an iterator over the mixins.
+    pub fn iter(&self) -> impl Iterator<Item = &'a Shape> {
+        self.mixins.iter()
+    }
+
+    /// Returns a mixin by index.
+    #[inline]
+    pub fn get(&self, index: usize) -> Option<&'a Shape> {
+        self.mixins.get(index)
+    }
+
+    /// Returns true if the mixins contain a shape with the given ID.
+    #[inline]
+    pub fn contains(&self, id: &ShapeId) -> bool {
+        self.mixins.iter().any(|mixin| mixin.id() == id)
+    }
+
+    /// Returns a slice containing the entire vector.
+    #[inline]
+    pub fn as_slice(&self) -> &'a [Shape] {
+        self.mixins.as_slice()
+    }
+}
+
+impl<'a> From<&'a Vec<Shape>> for Mixins<'a> {
+    fn from(mixins: &'a Vec<Shape>) -> Self {
+        Self::new(mixins)
+    }
+}
+
+impl<'a> IntoIterator for Mixins<'a> {
+    type Item = &'a Shape;
+    type IntoIter = std::slice::Iter<'a, Shape>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.mixins.iter()
+    }
+}
+
+impl Index<usize> for Mixins<'_> {
+    type Output = Shape;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.mixins[index]
     }
 }
 

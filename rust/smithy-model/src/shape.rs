@@ -10,16 +10,12 @@ mod builder;
 mod error;
 pub mod iter;
 mod member;
+mod mixin;
 mod operation;
 mod resource;
 mod service;
 mod simple;
 mod type_checks;
-
-use crate::shape_id::ShapeId;
-use crate::traits::{BoxTrait, Mixin, Trait, TraitMap};
-use iter::Members;
-use std::hash::{Hash, Hasher};
 
 pub use self::aggregate::*;
 pub use self::builder::*;
@@ -29,6 +25,11 @@ pub use self::operation::*;
 pub use self::resource::*;
 pub use self::service::*;
 pub use self::simple::*;
+use crate::shape::iter::Mixins;
+use crate::shape_id::ShapeId;
+use crate::traits::{BoxTrait, Mixin, Trait, TraitMap};
+use iter::Members;
+use std::hash::{Hash, Hasher};
 
 /// A Smithy shape.
 ///
@@ -208,13 +209,13 @@ pub(crate) trait ProvideShapeMetadata {
 /// Common trait for all shape types providing access to mixins
 pub trait HasMixins: HasShapeId {
     /// Get the mixins applied to this shape
-    fn mixins(&self) -> &[Shape];
+    fn mixins(&self) -> Mixins<'_>;
 }
 
 // Blanket implementation for any type that provides shape metadata
 impl<T: ProvideShapeMetadata> HasMixins for T {
-    fn mixins(&self) -> &[Shape] {
-        &self.meta().mixins
+    fn mixins(&self) -> Mixins<'_> {
+        Mixins::new(&self.meta().mixins)
     }
 }
 
@@ -368,16 +369,6 @@ pub(crate) struct ShapeMetadata {
 }
 
 impl ShapeMetadata {
-    /// Create new shape metadata
-    pub(crate) fn new(id: ShapeId, traits: TraitMap) -> Self {
-        Self {
-            id,
-            introduced_traits: traits.clone(),
-            effective_traits: traits,
-            mixins: Vec::new(),
-        }
-    }
-
     /// Convert this metadata to a builder
     pub(crate) fn to_builder(&self) -> ShapeMetadataBuilder {
         let mut builder = ShapeMetadataBuilder::new().id(self.id.to_string());

@@ -1,6 +1,6 @@
 use crate::shape::{
-    field_names, parse_shape_id, required_field_error, ProvideShapeMetadata, ProvideTraitsMut,
-    Shape, ShapeMetadata,
+    field_names, required_field_error, ProvideShapeMetadata, ProvideTraitsMut, Shape,
+    ShapeMetadata, ShapeMetadataBuilder,
 };
 use crate::traits::TraitMap;
 use crate::{shape, ShapeId};
@@ -18,8 +18,7 @@ pub struct MemberShape {
 /// Builder for creating a member shape.
 #[derive(Debug, Default)]
 pub struct MemberShapeBuilder {
-    id: Option<String>,
-    traits: TraitMap,
+    metadata: ShapeMetadataBuilder,
     member_name: Option<String>,
     target: Option<ShapeId>,
 }
@@ -32,7 +31,7 @@ impl MemberShapeBuilder {
 
     /// Set the ID of the member shape.
     pub fn id(mut self, id: impl Into<String>) -> Self {
-        self.id = Some(id.into());
+        self.metadata = self.metadata.id(id);
         self
     }
 
@@ -48,12 +47,21 @@ impl MemberShapeBuilder {
         self
     }
 
+    /// Add a mixin to the member shape.
+    pub fn mixin(mut self, mixin: impl Into<Shape>) -> Self {
+        self.metadata = self.metadata.with_mixin(mixin.into());
+        self
+    }
+
+    /// Remove all mixins from the shape
+    pub fn clear_mixins(mut self) -> Self {
+        self.metadata.mixins.clear();
+        self
+    }
+
     /// Build the member shape.
     pub fn build(self) -> Result<MemberShape, shape::BuildError> {
-        let id_str = self
-            .id
-            .ok_or_else(|| required_field_error(field_names::ID))?;
-        let id = parse_shape_id(&id_str)?;
+        let metadata = self.metadata.build()?;
 
         let member_name = self
             .member_name
@@ -64,7 +72,7 @@ impl MemberShapeBuilder {
             .ok_or_else(|| required_field_error(field_names::TARGET))?;
 
         Ok(MemberShape {
-            metadata: ShapeMetadata::new(id, self.traits),
+            metadata,
             member_name,
             target,
         })
@@ -73,7 +81,7 @@ impl MemberShapeBuilder {
 
 impl ProvideTraitsMut for MemberShapeBuilder {
     fn traits_mut(&mut self) -> &mut TraitMap {
-        &mut self.traits
+        &mut self.metadata.introduced_traits
     }
 }
 
@@ -81,6 +89,20 @@ impl MemberShape {
     /// Create a new builder for this shape type.
     pub fn builder() -> MemberShapeBuilder {
         MemberShapeBuilder::new()
+    }
+
+    /// Get the target shape ID of this member shape
+    pub fn target(&self) -> &ShapeId {
+        &self.target
+    }
+
+    /// Convert this shape back into a builder
+    pub fn to_builder(self) -> MemberShapeBuilder {
+        MemberShapeBuilder {
+            metadata: self.metadata.to_builder(),
+            member_name: Some(self.member_name),
+            target: Some(self.target),
+        }
     }
 }
 
