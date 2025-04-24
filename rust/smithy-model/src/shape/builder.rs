@@ -9,7 +9,7 @@ use std::str::FromStr;
 
 use crate::shape::error::BuildError;
 use crate::shape::ShapeBuilder;
-use crate::shape_id::ShapeId;
+use crate::shape::ShapeId;
 use crate::traits::{Documentation, Mixin, Required};
 
 /// Common field names used in builders
@@ -55,7 +55,7 @@ pub trait ShapeBuilderExt: ShapeBuilder + Sized {
     /// use smithy_model::shape::StringShape;
     /// use smithy_model::shape::ShapeProperties;
     /// use smithy_model::shape::ShapeBuilderExt;
-    /// use smithy_model::shape_id::ShapeId;
+    /// use smithy_model::shape::ShapeId;
     /// use smithy_model::traits::{Documentation, Trait};
     ///
     /// let shape = StringShape::builder()
@@ -80,7 +80,7 @@ pub trait ShapeBuilderExt: ShapeBuilder + Sized {
     /// use smithy_model::shape::StringShape;
     /// use smithy_model::shape::ShapeProperties;
     /// use smithy_model::shape::ShapeBuilderExt;
-    /// use smithy_model::shape_id::ShapeId;
+    /// use smithy_model::shape::ShapeId;
     /// use smithy_model::traits::{Required, Trait};
     ///
     /// let shape = StringShape::builder()

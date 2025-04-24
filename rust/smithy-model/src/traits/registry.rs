@@ -8,7 +8,7 @@
 use std::collections::HashMap;
 
 use crate::node::Node;
-use crate::shape_id::ShapeId;
+use crate::shape::ShapeId;
 use crate::traits::{BoxTrait, Deprecated, Documentation, DynamicTrait, Required, Trait};
 
 /// Registry for trait creation during deserialization
@@ -21,7 +21,7 @@ use crate::traits::{BoxTrait, Deprecated, Documentation, DynamicTrait, Required,
 ///
 /// ```
 /// use smithy_model::traits::{TraitRegistry, Documentation, Trait};
-/// use smithy_model::shape_id::ShapeId;
+/// use smithy_model::shape::ShapeId;
 /// use smithy_model::node::Node;
 ///
 /// let registry = TraitRegistry::standard();

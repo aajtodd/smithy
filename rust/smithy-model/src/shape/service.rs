@@ -5,10 +5,10 @@
 
 //! Service shape types for the Smithy model.
 
+use crate::shape::ShapeId;
 use crate::shape::{
     error::BuildError, Shape, ShapeBuilder, ShapeMetadata, ShapeMetadataBuilder, ShapeProperties,
 };
-use crate::shape_id::ShapeId;
 
 /// A [service](https://smithy.io/2.0/spec/service-types.html#service) shape
 #[derive(Debug, Clone, PartialEq)]

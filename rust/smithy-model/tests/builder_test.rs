@@ -2,11 +2,11 @@
  * Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
  * SPDX-License-Identifier: Apache-2.0
  */
+use smithy_model::shape::ShapeId;
 use smithy_model::shape::{BlobShape, StringShape};
 use smithy_model::shape::{ListShape, MapShape, StructureShape};
 use smithy_model::shape::{MemberShape, ShapeBuilder};
 use smithy_model::shape::{ShapeBuilderExt, ShapeProperties};
-use smithy_model::shape_id::ShapeId;
 use smithy_model::traits::DynamicTrait;
 
 #[test]

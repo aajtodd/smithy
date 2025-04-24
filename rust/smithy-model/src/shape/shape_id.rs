@@ -22,7 +22,7 @@ use std::str::FromStr;
 /// # Examples
 ///
 /// ```
-/// use smithy_model::ShapeId;
+/// use smithy_model::shape::ShapeId;
 /// use std::str::FromStr;
 ///
 /// // Create a shape ID from components

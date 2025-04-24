@@ -1,8 +1,8 @@
+use crate::shape::ShapeId;
 use crate::shape::{
     BuildError, Shape, ShapeBuilder, ShapeMetadata, ShapeMetadataBuilder, ShapeProperties,
 };
 use crate::traits::{Mixin, Trait};
-use crate::ShapeId;
 
 /// An [operation](https://smithy.io/2.0/spec/service-types.html#operation) shape
 #[derive(Debug, Clone, PartialEq)]

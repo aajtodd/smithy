@@ -7,9 +7,8 @@
 
 use smithy_model::shape::{
     ListShape, MapShape, MemberShape, OperationShape, ResourceShape, ServiceShape, ShapeBuilder,
-    ShapeBuilderExt, ShapeProperties, StructureShape, UnionShape,
+    ShapeBuilderExt, ShapeId, ShapeProperties, StructureShape, UnionShape,
 };
-use smithy_model::shape_id::ShapeId;
 use smithy_model::traits::{Documentation, Mixin, Required, Trait};
 
 #[test]

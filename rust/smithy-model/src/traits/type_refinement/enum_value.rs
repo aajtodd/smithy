@@ -7,7 +7,7 @@ use std::any::Any;
 use std::fmt;
 
 use crate::node::Node;
-use crate::shape_id::ShapeId;
+use crate::shape::ShapeId;
 use crate::traits::{BoxTrait, Trait};
 
 /// The [enumValue](https://smithy.io/2.0/spec/simple-types.html#enum-enumvalue-trait) trait

@@ -14,6 +14,7 @@ mod mixin;
 mod operation;
 mod resource;
 mod service;
+mod shape_id;
 mod simple;
 mod type_checks;
 
@@ -26,9 +27,9 @@ pub use self::resource::*;
 pub use self::service::*;
 pub use self::simple::*;
 use crate::shape::iter::Mixins;
-use crate::shape_id::ShapeId;
 use crate::traits::{BoxTrait, Trait, TraitMap};
 use iter::Members;
+pub use shape_id::ShapeId;
 use std::hash::{Hash, Hasher};
 
 /// A Smithy shape.
@@ -166,7 +167,7 @@ pub trait ShapeBuilder {
     /// ```
     /// use smithy_model::shape::StringShape;
     /// use smithy_model::shape::{ShapeBuilder, ShapeProperties};
-    /// use smithy_model::shape_id::ShapeId;
+    /// use smithy_model::shape::ShapeId;
     /// use smithy_model::traits::{DynamicTrait, Trait};
     ///
     /// let trait_id = ShapeId::new("example.foo", "customTrait").unwrap();

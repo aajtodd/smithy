@@ -496,8 +496,8 @@ impl From<UnionShape> for Shape {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::shape::ShapeId;
     use crate::traits::Mixin;
-    use crate::ShapeId;
     // List shape tests
 
     #[test]

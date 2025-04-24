@@ -470,8 +470,8 @@ mod tests {
     // Simple shape tests
     use super::*;
     use crate::shape::builder::ShapeBuilderExt;
+    use crate::shape::ShapeId;
     use crate::traits::{Mixin, Required, Trait};
-    use crate::ShapeId;
     use std::str::FromStr;
 
     #[test]

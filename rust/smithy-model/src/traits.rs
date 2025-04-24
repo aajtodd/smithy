@@ -13,7 +13,7 @@ use std::collections::HashMap;
 use std::fmt;
 
 use crate::node::Node;
-use crate::shape_id::ShapeId;
+use crate::shape::ShapeId;
 
 mod deprecated;
 mod documentation;
@@ -45,7 +45,7 @@ pub type BoxTrait = Box<dyn Trait>;
 /// ```
 /// use std::any::Any;
 /// use smithy_model::traits::{Trait, BoxTrait};
-/// use smithy_model::shape_id::ShapeId;
+/// use smithy_model::shape::ShapeId;
 /// use smithy_model::node::Node;
 ///
 /// #[derive(Clone, Debug)]

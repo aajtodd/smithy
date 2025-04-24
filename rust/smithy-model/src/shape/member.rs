@@ -2,7 +2,7 @@ use crate::shape::{
     field_names, required_field_error, Shape, ShapeBuilder, ShapeMetadata, ShapeMetadataBuilder,
     ShapeProperties,
 };
-use crate::{shape, ShapeId};
+use crate::{shape, shape::ShapeId};
 
 /// A [member](https://smithy.io/2.0/spec/model.html#member-shapes) shape
 #[derive(Debug, Clone, PartialEq)]

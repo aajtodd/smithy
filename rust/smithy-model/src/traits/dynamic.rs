@@ -6,7 +6,7 @@
 //! Dynamic trait implementation.
 
 use crate::node::Node;
-use crate::shape_id::ShapeId;
+use crate::shape::ShapeId;
 use crate::traits::{BoxTrait, Trait};
 use std::any::Any;
 
@@ -20,7 +20,7 @@ use std::any::Any;
 ///
 /// ```
 /// use smithy_model::traits::{DynamicTrait, Trait};
-/// use smithy_model::shape_id::ShapeId;
+/// use smithy_model::shape::ShapeId;
 /// use smithy_model::node::Node;
 ///
 /// let id = ShapeId::new_unchecked("example#customTrait");

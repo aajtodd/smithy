@@ -5,8 +5,8 @@
 
 //! Iterator types for working with shapes.
 
+use crate::shape::ShapeId;
 use crate::shape::{MemberShape, Shape, ShapeProperties};
-use crate::ShapeId;
 use indexmap::IndexMap;
 use std::ops::Index;
 
@@ -414,7 +414,7 @@ impl Index<usize> for Mixins<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::shape_id::ShapeId;
+    use crate::shape::ShapeId;
 
     #[test]
     fn test_members_empty() {

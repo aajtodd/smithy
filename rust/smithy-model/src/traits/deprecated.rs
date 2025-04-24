@@ -9,7 +9,7 @@ use std::any::Any;
 use std::collections::HashMap;
 
 use crate::node::Node;
-use crate::shape_id::ShapeId;
+use crate::shape::ShapeId;
 use crate::traits::{BoxTrait, Trait};
 
 /// The deprecated trait

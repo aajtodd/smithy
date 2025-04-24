@@ -10,7 +10,7 @@ use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 
 use crate::node::Node;
-use crate::shape_id::ShapeId;
+use crate::shape::ShapeId;
 use crate::traits::{BoxTrait, Trait};
 
 /// The mixin trait
@@ -23,7 +23,7 @@ use crate::traits::{BoxTrait, Trait};
 ///
 /// ```
 /// use smithy_model::traits::{Mixin, Trait};
-/// use smithy_model::shape_id::ShapeId;
+/// use smithy_model::shape::ShapeId;
 ///
 /// let mixin = Mixin::new();
 /// assert!(mixin.local_traits.is_empty());
