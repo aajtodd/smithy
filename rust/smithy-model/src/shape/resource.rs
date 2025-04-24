@@ -1,7 +1,7 @@
 use crate::shape::{
-    BuildError, ProvideShapeMetadata, ProvideTraitsMut, Shape, ShapeMetadata, ShapeMetadataBuilder,
+    BuildError, Shape, ShapeBuilder, ShapeMetadata, ShapeMetadataBuilder, ShapeProperties,
 };
-use crate::traits::{Mixin, Trait, TraitMap};
+use crate::traits::{Mixin, Trait};
 use crate::{shape, ShapeId};
 use indexmap::IndexMap;
 
@@ -57,8 +57,8 @@ impl ResourceShape {
     }
 }
 
-impl ProvideShapeMetadata for ResourceShape {
-    fn meta(&self) -> &ShapeMetadata {
+impl ShapeProperties for ResourceShape {
+    fn metadata(&self) -> &ShapeMetadata {
         &self.metadata
     }
 }
@@ -162,12 +162,6 @@ impl ResourceShapeBuilder {
         self
     }
 
-    /// Add a mixin to the resource shape.
-    pub fn mixin(mut self, mixin: impl Into<Shape>) -> Self {
-        self.metadata = self.metadata.with_mixin(mixin.into());
-        self
-    }
-
     /// Build the resource shape.
     pub fn build(self) -> Result<ResourceShape, BuildError> {
         // Build the metadata
@@ -240,16 +234,15 @@ impl ResourceShapeBuilder {
     }
 }
 
-impl ProvideTraitsMut for ResourceShapeBuilder {
-    fn traits_mut(&mut self) -> &mut TraitMap {
-        &mut self.metadata.introduced_traits
+impl ShapeBuilder for ResourceShapeBuilder {
+    fn metadata_mut(&mut self) -> &mut ShapeMetadataBuilder {
+        &mut self.metadata
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::shape::{HasShapeId, ShapeBuilderExt};
     // Resource shape tests
 
     #[test]

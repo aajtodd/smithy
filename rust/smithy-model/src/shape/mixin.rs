@@ -7,12 +7,9 @@
 
 use crate::shape::error::BuildError;
 use crate::shape::iter::Members;
-use crate::shape::{
-    HasMixins, HasShapeId, HasTraits, MemberShape, ProvideTraitsMut, Shape, ShapeId, ShapeMetadata,
-};
+use crate::shape::{MemberShape, Shape, ShapeBuilder, ShapeId, ShapeMetadata, ShapeProperties};
 use crate::traits::{Mixin, Trait, TraitMap};
 use indexmap::IndexMap;
-// FIXME - provide a unified way for builders to add/clear mixins. It's all adhoc right now.
 // FIXME - unify "named member" builders as well for adding/removing members?
 
 /// Compute effective traits for a shape, including those from mixins

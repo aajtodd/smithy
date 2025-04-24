@@ -94,85 +94,31 @@ pub enum Shape {
     Member(MemberShape),
 }
 
-// Implement ProvideShapeMetadata for Shape by delegating to its variants
-impl ProvideShapeMetadata for Shape {
-    fn meta(&self) -> &ShapeMetadata {
-        match self {
-            Shape::Boolean(shape) => shape.meta(),
-            Shape::Byte(shape) => shape.meta(),
-            Shape::Short(shape) => shape.meta(),
-            Shape::Integer(shape) => shape.meta(),
-            Shape::Long(shape) => shape.meta(),
-            Shape::Float(shape) => shape.meta(),
-            Shape::Double(shape) => shape.meta(),
-            Shape::BigInteger(shape) => shape.meta(),
-            Shape::BigDecimal(shape) => shape.meta(),
-            Shape::String(shape) => shape.meta(),
-            Shape::Blob(shape) => shape.meta(),
-            Shape::Timestamp(shape) => shape.meta(),
-            Shape::Document(shape) => shape.meta(),
-            Shape::Enum(shape) => shape.meta(),
-            Shape::IntEnum(shape) => shape.meta(),
-            Shape::List(shape) => shape.meta(),
-            Shape::Map(shape) => shape.meta(),
-            Shape::Set(shape) => shape.meta(),
-            Shape::Structure(shape) => shape.meta(),
-            Shape::Union(shape) => shape.meta(),
-            Shape::Service(shape) => shape.meta(),
-            Shape::Operation(shape) => shape.meta(),
-            Shape::Resource(shape) => shape.meta(),
-            Shape::Member(shape) => shape.meta(),
-        }
+/// Trait for accessing properties common to all shapes
+pub trait ShapeProperties {
+    /// Get the shape metadata
+    #[doc(hidden)]
+    fn metadata(&self) -> &ShapeMetadata;
+
+    /// Get the shape's ID
+    fn id(&self) -> &ShapeId {
+        &self.metadata().id
     }
-}
 
-// Implement members() method for Shape
-impl Shape {
-    /// Returns a Members container for this shape.
-    pub fn members(&self) -> Members<'_> {
-        match self {
-            Shape::Structure(shape) => shape.members(),
-            Shape::Union(shape) => shape.members(),
-            Shape::List(shape) => shape.members(),
-            Shape::Set(shape) => shape.members(),
-            Shape::Map(shape) => shape.members(),
-            Shape::Enum(shape) => shape.members(),
-            Shape::IntEnum(shape) => shape.members(),
-            _ => Members::empty(),
-        }
+    /// Get the shape's mixins
+    fn mixins(&self) -> Mixins<'_> {
+        Mixins::new(&self.metadata().mixins)
     }
-}
 
-impl AsRef<ShapeId> for Shape {
-    fn as_ref(&self) -> &ShapeId {
-        self.id()
-    }
-}
-
-impl Hash for Shape {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        // Hash the shape type (variant)
-        std::mem::discriminant(self).hash(state);
-        // Hash the ID
-        self.id().hash(state);
-        // We don't hash members and traits for performance reasons,
-        // similar to the Java implementation which only hashes type and ID
-    }
-}
-
-/// Common trait for all shape types providing access to shape ID
-pub trait HasShapeId {
-    /// Get the shape ID
-    fn id(&self) -> &ShapeId;
-}
-
-/// Common trait for all shape types providing access to traits
-pub trait HasTraits: HasShapeId {
     /// Get all traits applied to this shape (including those from mixins)
-    fn traits(&self) -> &TraitMap;
+    fn traits(&self) -> &TraitMap {
+        &self.metadata().effective_traits
+    }
 
     /// Get traits applied directly to this shape (excluding those from mixins)
-    fn introduced_traits(&self) -> &TraitMap;
+    fn introduced_traits(&self) -> &TraitMap {
+        &self.metadata().introduced_traits
+    }
 
     /// Check if this shape has a specific trait
     fn has_trait(&self, trait_id: impl AsRef<ShapeId>) -> bool {
@@ -202,28 +148,142 @@ pub trait HasTraits: HasShapeId {
     }
 }
 
-/// Private trait for accessing shape metadata
-pub(crate) trait ProvideShapeMetadata {
-    /// Get the shape metadata
-    fn meta(&self) -> &ShapeMetadata;
+/// Common trait for all shape builders
+pub trait ShapeBuilder {
+    /// Get mutable access to the metadata builder
+    #[doc(hidden)]
+    fn metadata_mut(&mut self) -> &mut ShapeMetadataBuilder;
+
+    /// Get mutable access to the trait map
+    fn traits_mut(&mut self) -> &mut TraitMap {
+        &mut self.metadata_mut().introduced_traits
+    }
+
+    /// Add a trait to the shape
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use smithy_model::shape::StringShape;
+    /// use smithy_model::shape::{ShapeBuilder, ShapeProperties};
+    /// use smithy_model::shape_id::ShapeId;
+    /// use smithy_model::traits::{DynamicTrait, Trait};
+    ///
+    /// let trait_id = ShapeId::new("example.foo", "customTrait").unwrap();
+    /// let custom_trait = DynamicTrait::new(trait_id.clone(), None);
+    ///
+    /// let shape = StringShape::builder()
+    ///     .id("example.foo#MyString")
+    ///     .with_trait(custom_trait)
+    ///     .build()
+    ///     .unwrap();
+    ///
+    /// assert!(shape.has_trait(trait_id));
+    /// ```
+    fn with_trait<T: Trait + 'static>(mut self, trait_obj: T) -> Self
+    where
+        Self: Sized,
+    {
+        self.traits_mut().insert(Box::new(trait_obj));
+        self
+    }
+
+    /// Add a mixin to the shape
+    fn mixin(mut self, mixin: impl Into<Shape>) -> Self
+    where
+        Self: Sized,
+    {
+        let mixin = mixin.into();
+        self.metadata_mut().add_mixin(mixin);
+        self
+    }
+
+    /// Remove all mixins from the shape
+    fn clear_mixins(mut self) -> Self
+    where
+        Self: Sized,
+    {
+        self.metadata_mut().clear_mixins();
+        self
+    }
+
+    /// Remove a specific mixin from the shape by ID
+    fn remove_mixin(mut self, id: impl AsRef<ShapeId>) -> Self
+    where
+        Self: Sized,
+    {
+        self.metadata_mut().remove_mixin(id.as_ref());
+        self
+    }
 }
 
-/// Common trait for all shape types providing access to mixins
-pub trait HasMixins: HasShapeId {
-    /// Get the mixins applied to this shape
-    fn mixins(&self) -> Mixins<'_>;
+impl Shape {
+    /// Returns a Members container for this shape.
+    pub fn members(&self) -> Members<'_> {
+        match self {
+            Shape::Structure(shape) => shape.members(),
+            Shape::Union(shape) => shape.members(),
+            Shape::List(shape) => shape.members(),
+            Shape::Set(shape) => shape.members(),
+            Shape::Map(shape) => shape.members(),
+            Shape::Enum(shape) => shape.members(),
+            Shape::IntEnum(shape) => shape.members(),
+            _ => Members::empty(),
+        }
+    }
 }
 
-// Blanket implementation for any type that provides shape metadata
-impl<T: ProvideShapeMetadata> HasMixins for T {
-    fn mixins(&self) -> Mixins<'_> {
-        Mixins::new(&self.meta().mixins)
+impl ShapeProperties for Shape {
+    fn metadata(&self) -> &ShapeMetadata {
+        match self {
+            Shape::Boolean(shape) => shape.metadata(),
+            Shape::Byte(shape) => shape.metadata(),
+            Shape::Short(shape) => shape.metadata(),
+            Shape::Integer(shape) => shape.metadata(),
+            Shape::Long(shape) => shape.metadata(),
+            Shape::Float(shape) => shape.metadata(),
+            Shape::Double(shape) => shape.metadata(),
+            Shape::BigInteger(shape) => shape.metadata(),
+            Shape::BigDecimal(shape) => shape.metadata(),
+            Shape::String(shape) => shape.metadata(),
+            Shape::Blob(shape) => shape.metadata(),
+            Shape::Timestamp(shape) => shape.metadata(),
+            Shape::Document(shape) => shape.metadata(),
+            Shape::Enum(shape) => shape.metadata(),
+            Shape::IntEnum(shape) => shape.metadata(),
+            Shape::List(shape) => shape.metadata(),
+            Shape::Map(shape) => shape.metadata(),
+            Shape::Set(shape) => shape.metadata(),
+            Shape::Structure(shape) => shape.metadata(),
+            Shape::Union(shape) => shape.metadata(),
+            Shape::Service(shape) => shape.metadata(),
+            Shape::Operation(shape) => shape.metadata(),
+            Shape::Resource(shape) => shape.metadata(),
+            Shape::Member(shape) => shape.metadata(),
+        }
+    }
+}
+
+impl AsRef<ShapeId> for Shape {
+    fn as_ref(&self) -> &ShapeId {
+        self.id()
+    }
+}
+
+impl Hash for Shape {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        // Hash the shape type (variant)
+        std::mem::discriminant(self).hash(state);
+        // Hash the ID
+        self.id().hash(state);
+        // We don't hash members and traits for performance reasons,
+        // similar to the Java implementation which only hashes type and ID
     }
 }
 
 /// Builder for creating shape metadata
 #[derive(Debug, Default, Clone)]
-pub(crate) struct ShapeMetadataBuilder {
+pub struct ShapeMetadataBuilder {
     /// The shape ID string
     id: Option<String>,
     /// Traits applied directly to this shape (introduced traits)
@@ -245,9 +305,21 @@ impl ShapeMetadataBuilder {
     }
 
     /// Add a mixin to the shape
-    pub(crate) fn with_mixin(mut self, mixin: Shape) -> Self {
+    pub(crate) fn add_mixin(&mut self, mixin: Shape) {
         self.mixins.push(mixin);
-        self
+    }
+
+    /// Remove a mixin by id
+    pub(crate) fn remove_mixin(&mut self, mixin_id: &ShapeId) {
+        let idx = self.mixins.iter().position(|m| m.id() == mixin_id);
+        if let Some(idx) = idx {
+            self.mixins.remove(idx);
+        }
+    }
+
+    /// Clear all mixins
+    pub(crate) fn clear_mixins(&mut self) {
+        self.mixins.clear();
     }
 
     /// Validate that all mixins have the @mixin trait and are of the expected shape type
@@ -313,7 +385,7 @@ impl ShapeMetadataBuilder {
 
 /// Common metadata for all shapes (implementation detail)
 #[derive(Debug, Clone)]
-pub(crate) struct ShapeMetadata {
+pub struct ShapeMetadata {
     /// The shape ID
     id: ShapeId,
     /// Traits applied directly to this shape (introduced traits)
@@ -341,23 +413,6 @@ impl ShapeMetadata {
         }
 
         builder
-    }
-}
-
-// Blanket implementations for any type that provides shape metadata
-impl<T: ProvideShapeMetadata> HasShapeId for T {
-    fn id(&self) -> &ShapeId {
-        &self.meta().id
-    }
-}
-
-impl<T: ProvideShapeMetadata> HasTraits for T {
-    fn traits(&self) -> &TraitMap {
-        &self.meta().effective_traits
-    }
-
-    fn introduced_traits(&self) -> &TraitMap {
-        &self.meta().introduced_traits
     }
 }
 
@@ -487,19 +542,23 @@ mod tests {
             let shape = create_test_shape();
 
             // Test that metadata is correctly initialized
-            assert_eq!(shape.meta().id.to_string(), "example.foo#TestShape");
-            assert_eq!(shape.meta().effective_traits.len(), 1);
+            assert_eq!(shape.metadata().id.to_string(), "example.foo#TestShape");
+            assert_eq!(shape.metadata().effective_traits.len(), 1);
             assert!(shape
-                .meta()
+                .metadata()
                 .effective_traits
                 .contains_key(&ShapeId::new("smithy.api", "documentation").unwrap()));
 
             // Test that introduced_traits matches effective_traits initially
-            assert_eq!(shape.meta().introduced_traits.len(), 1);
-            assert_eq!(shape.meta().mixins.len(), 0);
+            assert_eq!(shape.metadata().introduced_traits.len(), 1);
+            assert_eq!(shape.metadata().mixins.len(), 0);
             assert_eq!(
-                shape.meta().introduced_traits.keys().collect::<Vec<_>>(),
-                shape.meta().effective_traits.keys().collect::<Vec<_>>()
+                shape
+                    .metadata()
+                    .introduced_traits
+                    .keys()
+                    .collect::<Vec<_>>(),
+                shape.metadata().effective_traits.keys().collect::<Vec<_>>()
             );
         }
 

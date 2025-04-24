@@ -8,8 +8,9 @@
 use std::str::FromStr;
 
 use crate::shape::error::BuildError;
+use crate::shape::ShapeBuilder;
 use crate::shape_id::ShapeId;
-use crate::traits::{Documentation, Mixin, Required, Trait, TraitMap};
+use crate::traits::{Documentation, Mixin, Required};
 
 /// Common field names used in builders
 pub(crate) mod field_names {
@@ -44,48 +45,15 @@ pub(crate) fn parse_shape_id(id_str: &str) -> Result<ShapeId, BuildError> {
     })
 }
 
-/// Trait for accessing the traits container.
-pub trait ProvideTraitsMut {
-    /// Get mutable access to the traits container.
-    fn traits_mut(&mut self) -> &mut TraitMap;
-}
-
 /// Extension trait for shape builders with common trait methods.
-pub trait ShapeBuilderExt: ProvideTraitsMut + Sized {
-    /// Add a Smithy trait to the shape.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use smithy_model::shape::StringShape;
-    /// use smithy_model::shape::{HasShapeId, HasTraits};
-    /// use smithy_model::shape::ShapeBuilderExt;
-    /// use smithy_model::shape_id::ShapeId;
-    /// use smithy_model::traits::{DynamicTrait, Trait};
-    ///
-    /// let trait_id = ShapeId::new("example.foo", "customTrait").unwrap();
-    /// let custom_trait = DynamicTrait::new(trait_id.clone(), None);
-    ///
-    /// let shape = StringShape::builder()
-    ///     .id("example.foo#MyString")
-    ///     .with_trait(custom_trait)
-    ///     .build()
-    ///     .unwrap();
-    ///
-    /// assert!(shape.has_trait(trait_id));
-    /// ```
-    fn with_trait(mut self, strait: impl Trait) -> Self {
-        self.traits_mut().insert(Box::new(strait));
-        self
-    }
-
+pub trait ShapeBuilderExt: ShapeBuilder + Sized {
     /// Add documentation to the shape.
     ///
     /// # Examples
     ///
     /// ```
     /// use smithy_model::shape::StringShape;
-    /// use smithy_model::shape::{HasShapeId, HasTraits};
+    /// use smithy_model::shape::ShapeProperties;
     /// use smithy_model::shape::ShapeBuilderExt;
     /// use smithy_model::shape_id::ShapeId;
     /// use smithy_model::traits::{Documentation, Trait};
@@ -98,8 +66,10 @@ pub trait ShapeBuilderExt: ProvideTraitsMut + Sized {
     ///
     /// assert!(shape.has_trait(Documentation::static_id()));
     /// ```
-    fn documentation(self, doc: impl Into<String>) -> Self {
-        self.with_trait(Documentation(doc.into()))
+    fn documentation(mut self, doc: impl Into<String>) -> Self {
+        self.traits_mut()
+            .insert(Box::new(Documentation(doc.into())));
+        self
     }
 
     /// Mark the shape as required.
@@ -108,7 +78,7 @@ pub trait ShapeBuilderExt: ProvideTraitsMut + Sized {
     ///
     /// ```
     /// use smithy_model::shape::StringShape;
-    /// use smithy_model::shape::{HasShapeId, HasTraits};
+    /// use smithy_model::shape::ShapeProperties;
     /// use smithy_model::shape::ShapeBuilderExt;
     /// use smithy_model::shape_id::ShapeId;
     /// use smithy_model::traits::{Required, Trait};
@@ -121,8 +91,9 @@ pub trait ShapeBuilderExt: ProvideTraitsMut + Sized {
     ///
     /// assert!(shape.has_trait(Required::static_id()));
     /// ```
-    fn required(self) -> Self {
-        self.with_trait(Required)
+    fn required(mut self) -> Self {
+        self.traits_mut().insert(Box::new(Required));
+        self
     }
 
     /// Mark the shape as a mixin.
@@ -131,7 +102,7 @@ pub trait ShapeBuilderExt: ProvideTraitsMut + Sized {
     ///
     /// ```
     /// use smithy_model::shape::StringShape;
-    /// use smithy_model::shape::{HasShapeId, HasTraits};
+    /// use smithy_model::shape::ShapeProperties;
     /// use smithy_model::shape::ShapeBuilderExt;
     /// use smithy_model::traits::{Mixin, Trait};
     ///
@@ -143,17 +114,17 @@ pub trait ShapeBuilderExt: ProvideTraitsMut + Sized {
     ///
     /// assert!(shape.has_trait(Mixin::static_id()));
     /// ```
-    fn as_mixin(self) -> Self {
-        self.with_trait(Mixin::new())
+    fn as_mixin(mut self) -> Self {
+        self.traits_mut().insert(Box::new(Mixin::new()));
+        self
     }
 }
 
-// Implement ShapeBuilderExt for all types that implement ProvideTraitsMut
-impl<T: ProvideTraitsMut> ShapeBuilderExt for T {}
+impl<T: ShapeBuilder + Sized> ShapeBuilderExt for T {}
 
 #[cfg(test)]
 mod tests {
-    use crate::shape::{HasTraits, ShapeBuilderExt, StringShape};
+    use crate::shape::{ShapeBuilderExt, ShapeProperties, StringShape};
     use crate::traits::{Mixin, Trait};
 
     #[test]

@@ -6,11 +6,9 @@
 //! Service shape types for the Smithy model.
 
 use crate::shape::{
-    builder::ProvideTraitsMut, error::BuildError, ProvideShapeMetadata, Shape, ShapeMetadata,
-    ShapeMetadataBuilder,
+    error::BuildError, Shape, ShapeBuilder, ShapeMetadata, ShapeMetadataBuilder, ShapeProperties,
 };
 use crate::shape_id::ShapeId;
-use crate::traits::TraitMap;
 
 /// A [service](https://smithy.io/2.0/spec/service-types.html#service) shape
 #[derive(Debug, Clone, PartialEq)]
@@ -41,9 +39,8 @@ impl ServiceShape {
     }
 }
 
-// Implement ProvideShapeMetadata for all service shapes
-impl ProvideShapeMetadata for ServiceShape {
-    fn meta(&self) -> &ShapeMetadata {
+impl ShapeProperties for ServiceShape {
+    fn metadata(&self) -> &ShapeMetadata {
         &self.metadata
     }
 }
@@ -119,12 +116,6 @@ impl ServiceShapeBuilder {
         self
     }
 
-    /// Add a mixin to the service shape.
-    pub fn mixin(mut self, mixin: impl Into<Shape>) -> Self {
-        self.metadata = self.metadata.with_mixin(mixin.into());
-        self
-    }
-
     /// Build the service shape.
     pub fn build(self) -> Result<ServiceShape, BuildError> {
         // Build the metadata
@@ -184,9 +175,9 @@ impl ServiceShapeBuilder {
     }
 }
 
-impl ProvideTraitsMut for ServiceShapeBuilder {
-    fn traits_mut(&mut self) -> &mut TraitMap {
-        &mut self.metadata.introduced_traits
+impl ShapeBuilder for ServiceShapeBuilder {
+    fn metadata_mut(&mut self) -> &mut ShapeMetadataBuilder {
+        &mut self.metadata
     }
 }
 
@@ -194,7 +185,6 @@ impl ProvideTraitsMut for ServiceShapeBuilder {
 mod tests {
     use super::*;
     use crate::shape::operation::OperationShape;
-    use crate::shape::HasShapeId;
     // Service shape tests
 
     #[test]

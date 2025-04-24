@@ -1,8 +1,7 @@
 use crate::shape::{
-    field_names, required_field_error, ProvideShapeMetadata, ProvideTraitsMut, Shape,
-    ShapeMetadata, ShapeMetadataBuilder,
+    field_names, required_field_error, Shape, ShapeBuilder, ShapeMetadata, ShapeMetadataBuilder,
+    ShapeProperties,
 };
-use crate::traits::TraitMap;
 use crate::{shape, ShapeId};
 
 /// A [member](https://smithy.io/2.0/spec/model.html#member-shapes) shape
@@ -13,6 +12,39 @@ pub struct MemberShape {
     pub member_name: String,
     /// The target shape that this member references
     pub target: ShapeId,
+}
+
+impl MemberShape {
+    /// Create a new builder for this shape type.
+    pub fn builder() -> MemberShapeBuilder {
+        MemberShapeBuilder::new()
+    }
+
+    /// Get the target shape ID of this member shape
+    pub fn target(&self) -> &ShapeId {
+        &self.target
+    }
+
+    /// Convert this shape back into a builder
+    pub fn to_builder(self) -> MemberShapeBuilder {
+        MemberShapeBuilder {
+            metadata: self.metadata.to_builder(),
+            member_name: Some(self.member_name),
+            target: Some(self.target),
+        }
+    }
+}
+
+impl ShapeProperties for MemberShape {
+    fn metadata(&self) -> &ShapeMetadata {
+        &self.metadata
+    }
+}
+
+impl From<MemberShape> for Shape {
+    fn from(shape: MemberShape) -> Self {
+        Shape::Member(shape)
+    }
 }
 
 /// Builder for creating a member shape.
@@ -47,18 +79,6 @@ impl MemberShapeBuilder {
         self
     }
 
-    /// Add a mixin to the member shape.
-    pub fn mixin(mut self, mixin: impl Into<Shape>) -> Self {
-        self.metadata = self.metadata.with_mixin(mixin.into());
-        self
-    }
-
-    /// Remove all mixins from the shape
-    pub fn clear_mixins(mut self) -> Self {
-        self.metadata.mixins.clear();
-        self
-    }
-
     /// Build the member shape.
     pub fn build(self) -> Result<MemberShape, shape::BuildError> {
         let metadata = self.metadata.build()?;
@@ -79,41 +99,8 @@ impl MemberShapeBuilder {
     }
 }
 
-impl ProvideTraitsMut for MemberShapeBuilder {
-    fn traits_mut(&mut self) -> &mut TraitMap {
-        &mut self.metadata.introduced_traits
-    }
-}
-
-impl MemberShape {
-    /// Create a new builder for this shape type.
-    pub fn builder() -> MemberShapeBuilder {
-        MemberShapeBuilder::new()
-    }
-
-    /// Get the target shape ID of this member shape
-    pub fn target(&self) -> &ShapeId {
-        &self.target
-    }
-
-    /// Convert this shape back into a builder
-    pub fn to_builder(self) -> MemberShapeBuilder {
-        MemberShapeBuilder {
-            metadata: self.metadata.to_builder(),
-            member_name: Some(self.member_name),
-            target: Some(self.target),
-        }
-    }
-}
-
-impl ProvideShapeMetadata for MemberShape {
-    fn meta(&self) -> &ShapeMetadata {
-        &self.metadata
-    }
-}
-
-impl From<MemberShape> for Shape {
-    fn from(shape: MemberShape) -> Self {
-        Shape::Member(shape)
+impl ShapeBuilder for MemberShapeBuilder {
+    fn metadata_mut(&mut self) -> &mut ShapeMetadataBuilder {
+        &mut self.metadata
     }
 }

@@ -7,10 +7,10 @@
 
 use crate::shape::iter::Members;
 use crate::shape::{
-    builder::ProvideTraitsMut, error::BuildError, mixin, HasTraits, MemberShape,
-    ProvideShapeMetadata, Shape, ShapeBuilderExt, ShapeMetadata, ShapeMetadataBuilder,
+    error::BuildError, mixin, MemberShape, Shape, ShapeBuilder, ShapeMetadata,
+    ShapeMetadataBuilder, ShapeProperties,
 };
-use crate::traits::{type_refinement::EnumValue, TraitMap};
+use crate::traits::type_refinement::EnumValue;
 use indexmap::IndexMap;
 use paste::paste;
 use std::hash::Hash;
@@ -23,54 +23,10 @@ macro_rules! define_simple_shape {
     ) => {
         paste! {
             $(#[$shape_meta])*
-            /// A [$shape_name]($doc_link) shape
+            #[doc = concat!("A [", stringify!($shape_name), "](", $doc_link, ") shape")]
             #[derive(Debug, Clone, PartialEq, Eq)]
             pub struct $shape_name {
                 pub(crate) metadata: ShapeMetadata,
-            }
-
-            /// Builder for creating a $shape_name.
-            #[derive(Debug, Default)]
-            pub struct [<$shape_name Builder>] {
-                metadata: ShapeMetadataBuilder,
-            }
-
-            impl [<$shape_name Builder>] {
-                /// Create a new $shape_name builder.
-                pub(crate) fn new() -> Self {
-                    Self::default()
-                }
-
-                /// Set the ID of the $shape_name.
-                pub fn id(mut self, id: impl Into<String>) -> Self {
-                    self.metadata = self.metadata.id(id);
-                    self
-                }
-
-                /// Add a mixin to the $shape_name.
-                pub fn mixin(mut self, mixin: impl Into<Shape>) -> Self {
-                    self.metadata = self.metadata.with_mixin(mixin.into());
-                    self
-                }
-
-                /// Build the $shape_name.
-                pub fn build(self) -> Result<$shape_name, BuildError> {
-                    // Validate that mixins are of the same shape type
-                    self.metadata
-                        .validate_mixins(|shape| matches!(shape, Shape::$shape_variant(_)), stringify!($shape_variant))?;
-
-                    let metadata = self.metadata.build()?;
-
-                    Ok($shape_name {
-                        metadata,
-                    })
-                }
-            }
-
-            impl ProvideTraitsMut for [<$shape_name Builder>] {
-                fn traits_mut(&mut self) -> &mut TraitMap {
-                    &mut self.metadata.introduced_traits
-                }
             }
 
             impl $shape_name {
@@ -87,8 +43,8 @@ macro_rules! define_simple_shape {
                 }
             }
 
-            impl ProvideShapeMetadata for $shape_name {
-                fn meta(&self) -> &ShapeMetadata {
+            impl ShapeProperties for $shape_name {
+                fn metadata(&self) -> &ShapeMetadata {
                     &self.metadata
                 }
             }
@@ -102,6 +58,44 @@ macro_rules! define_simple_shape {
             impl Hash for $shape_name {
                 fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
                     self.metadata.id.hash(state);
+                }
+            }
+
+            #[doc = concat!("Builder for creating a ", stringify!($shape_name))]
+            #[derive(Debug, Default)]
+            pub struct [<$shape_name Builder>] {
+                metadata: ShapeMetadataBuilder,
+            }
+
+            impl [<$shape_name Builder>] {
+                #[doc = concat!("Create a new ", stringify!($shape_name), " builder.")]
+                pub(crate) fn new() -> Self {
+                    Self::default()
+                }
+
+                #[doc = concat!("Set the ID of the ", stringify!($shape_name))]
+                pub fn id(mut self, id: impl Into<String>) -> Self {
+                    self.metadata = self.metadata.id(id);
+                    self
+                }
+
+                #[doc = concat!("Build the ", stringify!($shape_name))]
+                pub fn build(self) -> Result<$shape_name, BuildError> {
+                    // Validate that mixins are of the same shape type
+                    self.metadata
+                        .validate_mixins(|shape| matches!(shape, Shape::$shape_variant(_)), stringify!($shape_variant))?;
+
+                    let metadata = self.metadata.build()?;
+
+                    Ok($shape_name {
+                        metadata,
+                    })
+                }
+            }
+
+            impl ShapeBuilder for [<$shape_name Builder>] {
+                fn metadata_mut(&mut self) -> &mut ShapeMetadataBuilder {
+                    &mut self.metadata
                 }
             }
         }
@@ -216,8 +210,8 @@ impl EnumShape {
     }
 }
 
-impl ProvideShapeMetadata for EnumShape {
-    fn meta(&self) -> &ShapeMetadata {
+impl ShapeProperties for EnumShape {
+    fn metadata(&self) -> &ShapeMetadata {
         &self.metadata
     }
 }
@@ -265,12 +259,6 @@ impl EnumShapeBuilder {
         self
     }
 
-    /// Add a mixin to the enum shape.
-    pub fn mixin(mut self, mixin: impl Into<Shape>) -> Self {
-        self.metadata = self.metadata.with_mixin(mixin.into());
-        self
-    }
-
     /// Build the enum shape.
     pub fn build(self) -> Result<EnumShape, BuildError> {
         // Validate that mixins are of the same shape type
@@ -293,9 +281,9 @@ impl EnumShapeBuilder {
     }
 }
 
-impl ProvideTraitsMut for EnumShapeBuilder {
-    fn traits_mut(&mut self) -> &mut TraitMap {
-        &mut self.metadata.introduced_traits
+impl ShapeBuilder for EnumShapeBuilder {
+    fn metadata_mut(&mut self) -> &mut ShapeMetadataBuilder {
+        &mut self.metadata
     }
 }
 
@@ -330,8 +318,8 @@ impl IntEnumShape {
     }
 }
 
-impl ProvideShapeMetadata for IntEnumShape {
-    fn meta(&self) -> &ShapeMetadata {
+impl ShapeProperties for IntEnumShape {
+    fn metadata(&self) -> &ShapeMetadata {
         &self.metadata
     }
 }
@@ -375,12 +363,6 @@ impl IntEnumShapeBuilder {
             .build()
             .unwrap();
         self.members.insert(member.member_name.clone(), member);
-        self
-    }
-
-    /// Add a mixin to the integer enum shape.
-    pub fn mixin(mut self, mixin: impl Into<Shape>) -> Self {
-        self.metadata = self.metadata.with_mixin(mixin.into());
         self
     }
 
@@ -456,9 +438,9 @@ impl IntEnumShapeBuilder {
     }
 }
 
-impl ProvideTraitsMut for IntEnumShapeBuilder {
-    fn traits_mut(&mut self) -> &mut TraitMap {
-        &mut self.metadata.introduced_traits
+impl ShapeBuilder for IntEnumShapeBuilder {
+    fn metadata_mut(&mut self) -> &mut ShapeMetadataBuilder {
+        &mut self.metadata
     }
 }
 
@@ -467,7 +449,6 @@ mod tests {
     // Simple shape tests
     use super::*;
     use crate::shape::builder::ShapeBuilderExt;
-    use crate::shape::{HasShapeId, HasTraits};
     use crate::traits::{Mixin, Required, Trait};
     use crate::ShapeId;
     use std::str::FromStr;

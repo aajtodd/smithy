@@ -121,7 +121,7 @@ pub trait Trait: Any + fmt::Debug {
 
     /// Clone this trait
     ///
-    /// This method is required because Box<dyn Trait> cannot implement Clone directly.
+    /// This method is required because `Box<dyn Trait>` cannot implement Clone directly.
     fn clone_trait(&self) -> BoxTrait;
 
     /// Convert to Any for downcasting

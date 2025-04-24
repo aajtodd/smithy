@@ -1,7 +1,7 @@
 use crate::shape::{
-    BuildError, ProvideShapeMetadata, ProvideTraitsMut, Shape, ShapeMetadata, ShapeMetadataBuilder,
+    BuildError, Shape, ShapeBuilder, ShapeMetadata, ShapeMetadataBuilder, ShapeProperties,
 };
-use crate::traits::{Mixin, Trait, TraitMap};
+use crate::traits::{Mixin, Trait};
 use crate::ShapeId;
 
 /// An [operation](https://smithy.io/2.0/spec/service-types.html#operation) shape
@@ -36,8 +36,8 @@ impl OperationShape {
     }
 }
 
-impl ProvideShapeMetadata for OperationShape {
-    fn meta(&self) -> &ShapeMetadata {
+impl ShapeProperties for OperationShape {
+    fn metadata(&self) -> &ShapeMetadata {
         &self.metadata
     }
 }
@@ -93,12 +93,6 @@ impl OperationShapeBuilder {
         self
     }
 
-    /// Add a mixin to the operation shape.
-    pub fn mixin(mut self, mixin: impl Into<Shape>) -> Self {
-        self.metadata = self.metadata.with_mixin(mixin.into());
-        self
-    }
-
     /// Build the operation shape.
     pub fn build(self) -> Result<OperationShape, BuildError> {
         // Build the metadata
@@ -145,17 +139,15 @@ impl OperationShapeBuilder {
     }
 }
 
-impl ProvideTraitsMut for OperationShapeBuilder {
-    fn traits_mut(&mut self) -> &mut TraitMap {
-        &mut self.metadata.introduced_traits
+impl ShapeBuilder for OperationShapeBuilder {
+    fn metadata_mut(&mut self) -> &mut ShapeMetadataBuilder {
+        &mut self.metadata
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::shape::builder::ShapeBuilderExt;
-    use crate::shape::HasShapeId;
     use crate::traits::Mixin;
     // Operation shape tests
 

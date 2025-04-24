@@ -6,12 +6,9 @@
 //! Aggregate shape types for the Smithy model.
 
 use crate::shape::{
-    builder::{self, ProvideTraitsMut},
-    error::BuildError,
-    iter::Members,
-    mixin, MemberShape, ProvideShapeMetadata, Shape, ShapeMetadata, ShapeMetadataBuilder,
+    builder, error::BuildError, iter::Members, mixin, MemberShape, Shape, ShapeBuilder,
+    ShapeMetadata, ShapeMetadataBuilder, ShapeProperties,
 };
-use crate::traits::TraitMap;
 use indexmap::IndexMap;
 
 /// A [list](https://smithy.io/2.0/spec/aggregate-types.html#list) shape
@@ -44,6 +41,12 @@ impl ListShape {
             metadata: self.metadata.to_builder(),
             member: Some(self.member),
         }
+    }
+}
+
+impl ShapeProperties for ListShape {
+    fn metadata(&self) -> &ShapeMetadata {
+        &self.metadata
     }
 }
 
@@ -86,9 +89,9 @@ impl ListShapeBuilder {
     }
 }
 
-impl ProvideTraitsMut for ListShapeBuilder {
-    fn traits_mut(&mut self) -> &mut TraitMap {
-        &mut self.metadata.introduced_traits
+impl ShapeBuilder for ListShapeBuilder {
+    fn metadata_mut(&mut self) -> &mut ShapeMetadataBuilder {
+        &mut self.metadata
     }
 }
 
@@ -130,6 +133,12 @@ impl MapShape {
             key: Some(self.key),
             value: Some(self.value),
         }
+    }
+}
+
+impl ShapeProperties for MapShape {
+    fn metadata(&self) -> &ShapeMetadata {
+        &self.metadata
     }
 }
 
@@ -186,9 +195,9 @@ impl MapShapeBuilder {
     }
 }
 
-impl ProvideTraitsMut for MapShapeBuilder {
-    fn traits_mut(&mut self) -> &mut TraitMap {
-        &mut self.metadata.introduced_traits
+impl ShapeBuilder for MapShapeBuilder {
+    fn metadata_mut(&mut self) -> &mut ShapeMetadataBuilder {
+        &mut self.metadata
     }
 }
 
@@ -222,6 +231,12 @@ impl SetShape {
             metadata: self.metadata.to_builder(),
             member: Some(self.member),
         }
+    }
+}
+
+impl ShapeProperties for SetShape {
+    fn metadata(&self) -> &ShapeMetadata {
+        &self.metadata
     }
 }
 
@@ -264,9 +279,9 @@ impl SetShapeBuilder {
     }
 }
 
-impl ProvideTraitsMut for SetShapeBuilder {
-    fn traits_mut(&mut self) -> &mut TraitMap {
-        &mut self.metadata.introduced_traits
+impl ShapeBuilder for SetShapeBuilder {
+    fn metadata_mut(&mut self) -> &mut ShapeMetadataBuilder {
+        &mut self.metadata
     }
 }
 
@@ -295,6 +310,12 @@ impl StructureShape {
             metadata: self.metadata.to_builder(),
             members: self.members,
         }
+    }
+}
+
+impl ShapeProperties for StructureShape {
+    fn metadata(&self) -> &ShapeMetadata {
+        &self.metadata
     }
 }
 
@@ -344,38 +365,6 @@ impl StructureShapeBuilder {
         self
     }
 
-    /// Add a mixin to the structure shape.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use smithy_model::shape::{StructureShape, Shape, HasMixins, HasShapeId, HasTraits};
-    /// use smithy_model::shape::ShapeBuilderExt;
-    /// use smithy_model::traits::{Mixin, Trait};
-    ///
-    /// let mixin = StructureShape::builder()
-    ///     .id("example.foo#MyMixin")
-    ///     .with_trait(Mixin::new())
-    ///     .build()
-    ///     .unwrap();
-    ///
-    /// let structure = StructureShape::builder()
-    ///     .id("example.foo#MyStructure")
-    ///     .mixin(mixin.clone())
-    ///     .build()
-    ///     .unwrap();
-    ///
-    /// assert_eq!(structure.mixins().len(), 1);
-    /// assert_eq!(structure.mixins()[0].id().to_string(), "example.foo#MyMixin");
-    /// ```
-    pub fn mixin(mut self, mixin: impl Into<Shape>) -> Self {
-        let mixin = mixin.into();
-
-        // Delegate to the metadata builder
-        self.metadata = self.metadata.with_mixin(mixin);
-        self
-    }
-
     /// Build the structure shape.
     pub fn build(self) -> Result<StructureShape, BuildError> {
         // Validate mixins before building
@@ -389,9 +378,9 @@ impl StructureShapeBuilder {
     }
 }
 
-impl ProvideTraitsMut for StructureShapeBuilder {
-    fn traits_mut(&mut self) -> &mut TraitMap {
-        &mut self.metadata.introduced_traits
+impl ShapeBuilder for StructureShapeBuilder {
+    fn metadata_mut(&mut self) -> &mut ShapeMetadataBuilder {
+        &mut self.metadata
     }
 }
 
@@ -414,12 +403,23 @@ impl UnionShape {
         Members::map(&self.members)
     }
 
+    // FIXME - we may want to have a get_member(&self, name: impl AsRef<str>) -> Option<&MemberShape> to avoid
+    // issues with lifetimes and Members iterator
+    // e.g.
+    // let foo_member = shape.members().get("foo").unwrap(); // error: doesn't live long enough
+
     /// Convert this shape back into a builder
     pub fn to_builder(self) -> UnionShapeBuilder {
         UnionShapeBuilder {
             metadata: self.metadata.to_builder(),
             members: self.members,
         }
+    }
+}
+
+impl ShapeProperties for UnionShape {
+    fn metadata(&self) -> &ShapeMetadata {
+        &self.metadata
     }
 }
 
@@ -448,38 +448,6 @@ impl UnionShapeBuilder {
         self
     }
 
-    /// Add a mixin to the union shape.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use smithy_model::shape::{UnionShape, Shape, HasMixins, HasShapeId, HasTraits};
-    /// use smithy_model::shape::ShapeBuilderExt;
-    /// use smithy_model::traits::{Mixin, Trait};
-    ///
-    /// let mixin = UnionShape::builder()
-    ///     .id("example.foo#MyMixin")
-    ///     .with_trait(Mixin::new())
-    ///     .build()
-    ///     .unwrap();
-    ///
-    /// let union = UnionShape::builder()
-    ///     .id("example.foo#MyUnion")
-    ///     .mixin(mixin.clone())
-    ///     .build()
-    ///     .unwrap();
-    ///
-    /// assert_eq!(union.mixins().len(), 1);
-    /// assert_eq!(union.mixins()[0].id().to_string(), "example.foo#MyMixin");
-    /// ```
-    pub fn mixin(mut self, mixin: impl Into<Shape>) -> Self {
-        let mixin = mixin.into();
-
-        // Delegate to the metadata builder
-        self.metadata = self.metadata.with_mixin(mixin);
-        self
-    }
-
     /// Build the union shape.
     pub fn build(self) -> Result<UnionShape, BuildError> {
         // Validate mixins before building
@@ -493,40 +461,9 @@ impl UnionShapeBuilder {
     }
 }
 
-impl ProvideTraitsMut for UnionShapeBuilder {
-    fn traits_mut(&mut self) -> &mut TraitMap {
-        &mut self.metadata.introduced_traits
-    }
-}
-
-// Implement ProvideShapeMetadata for all aggregate shapes
-impl ProvideShapeMetadata for ListShape {
-    fn meta(&self) -> &ShapeMetadata {
-        &self.metadata
-    }
-}
-
-impl ProvideShapeMetadata for MapShape {
-    fn meta(&self) -> &ShapeMetadata {
-        &self.metadata
-    }
-}
-
-impl ProvideShapeMetadata for SetShape {
-    fn meta(&self) -> &ShapeMetadata {
-        &self.metadata
-    }
-}
-
-impl ProvideShapeMetadata for StructureShape {
-    fn meta(&self) -> &ShapeMetadata {
-        &self.metadata
-    }
-}
-
-impl ProvideShapeMetadata for UnionShape {
-    fn meta(&self) -> &ShapeMetadata {
-        &self.metadata
+impl ShapeBuilder for UnionShapeBuilder {
+    fn metadata_mut(&mut self) -> &mut ShapeMetadataBuilder {
+        &mut self.metadata
     }
 }
 
@@ -564,7 +501,6 @@ impl From<UnionShape> for Shape {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::shape::{HasMixins, HasShapeId, ShapeBuilderExt};
     use crate::traits::Mixin;
     use crate::ShapeId;
     // List shape tests
