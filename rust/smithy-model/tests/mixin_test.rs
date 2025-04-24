@@ -9,7 +9,9 @@ use smithy_model::shape::{
     ListShape, MapShape, MemberShape, OperationShape, ResourceShape, ServiceShape, ShapeBuilder,
     ShapeBuilderExt, ShapeId, ShapeProperties, StructureShape, UnionShape,
 };
-use smithy_model::traits::{Documentation, Mixin, Required, Trait};
+use smithy_model::traits::documentation::Documentation;
+use smithy_model::traits::type_refinement::{Mixin, Required};
+use smithy_model::traits::Trait;
 
 #[test]
 fn test_structure_shape_mixins() {

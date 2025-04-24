@@ -9,7 +9,9 @@ use std::collections::HashMap;
 
 use crate::node::Node;
 use crate::shape::ShapeId;
-use crate::traits::{BoxTrait, Deprecated, Documentation, DynamicTrait, Required, Trait};
+use crate::traits::documentation::{Deprecated, Documentation};
+use crate::traits::type_refinement::Required;
+use crate::traits::{BoxTrait, DynamicTrait, Trait};
 
 /// Registry for trait creation during deserialization
 ///
@@ -20,7 +22,7 @@ use crate::traits::{BoxTrait, Deprecated, Documentation, DynamicTrait, Required,
 /// # Examples
 ///
 /// ```
-/// use smithy_model::traits::{TraitRegistry, Documentation, Trait};
+/// use smithy_model::traits::{TraitRegistry, documentation::Documentation, Trait};
 /// use smithy_model::shape::ShapeId;
 /// use smithy_model::node::Node;
 ///
@@ -43,6 +45,7 @@ impl TraitRegistry {
             creators: HashMap::new(),
         };
 
+        // FIXME - ensure we register all prelude traits
         // Register built-in traits
         registry.register::<Documentation>();
         registry.register::<Required>();

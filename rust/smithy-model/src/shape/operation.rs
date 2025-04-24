@@ -2,7 +2,7 @@ use crate::shape::ShapeId;
 use crate::shape::{
     BuildError, Shape, ShapeBuilder, ShapeMetadata, ShapeMetadataBuilder, ShapeProperties,
 };
-use crate::traits::{Mixin, Trait};
+use crate::traits::{type_refinement::Mixin, Trait};
 
 /// An [operation](https://smithy.io/2.0/spec/service-types.html#operation) shape
 #[derive(Debug, Clone, PartialEq)]
@@ -147,7 +147,7 @@ impl ShapeBuilder for OperationShapeBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::traits::Mixin;
+    use crate::traits::type_refinement::Mixin;
     // Operation shape tests
 
     #[test]

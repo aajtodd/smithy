@@ -22,7 +22,7 @@ use crate::traits::{BoxTrait, Trait};
 /// # Examples
 ///
 /// ```
-/// use smithy_model::traits::{Mixin, Trait};
+/// use smithy_model::traits::{type_refinement::Mixin, Trait};
 /// use smithy_model::shape::ShapeId;
 ///
 /// let mixin = Mixin::new();

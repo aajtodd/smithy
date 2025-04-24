@@ -8,7 +8,7 @@
 use crate::shape::error::BuildError;
 use crate::shape::iter::Members;
 use crate::shape::{MemberShape, Shape, ShapeBuilder, ShapeId, ShapeMetadata, ShapeProperties};
-use crate::traits::{Mixin, Trait, TraitMap};
+use crate::traits::{type_refinement::Mixin, Trait, TraitMap};
 use indexmap::IndexMap;
 // FIXME - unify "named member" builders as well for adding/removing members?
 
@@ -273,8 +273,8 @@ fn create_member_from_mixin(
 mod tests {
     use super::*;
     use crate::shape::{MemberShape, ShapeBuilderExt, StructureShape};
-    use crate::traits::Documentation;
-    use crate::traits::Required;
+    use crate::traits::documentation::Documentation;
+    use crate::traits::type_refinement::Required;
     use crate::traits::Trait;
 
     // Helper function to create a test structure shape with the given ID and members

@@ -10,7 +10,8 @@ use std::str::FromStr;
 use crate::shape::error::BuildError;
 use crate::shape::ShapeBuilder;
 use crate::shape::ShapeId;
-use crate::traits::{Documentation, Mixin, Required};
+use crate::traits::documentation::Documentation;
+use crate::traits::type_refinement::{Mixin, Required};
 
 /// Common field names used in builders
 pub(crate) mod field_names {
@@ -56,7 +57,8 @@ pub trait ShapeBuilderExt: ShapeBuilder + Sized {
     /// use smithy_model::shape::ShapeProperties;
     /// use smithy_model::shape::ShapeBuilderExt;
     /// use smithy_model::shape::ShapeId;
-    /// use smithy_model::traits::{Documentation, Trait};
+    /// use smithy_model::traits::Trait;
+    /// use smithy_model::traits::documentation::Documentation;
     ///
     /// let shape = StringShape::builder()
     ///     .id("example.foo#MyString")
@@ -81,7 +83,7 @@ pub trait ShapeBuilderExt: ShapeBuilder + Sized {
     /// use smithy_model::shape::ShapeProperties;
     /// use smithy_model::shape::ShapeBuilderExt;
     /// use smithy_model::shape::ShapeId;
-    /// use smithy_model::traits::{Required, Trait};
+    /// use smithy_model::traits::{type_refinement::Required, Trait};
     ///
     /// let shape = StringShape::builder()
     ///     .id("example.foo#MyString")
@@ -104,7 +106,7 @@ pub trait ShapeBuilderExt: ShapeBuilder + Sized {
     /// use smithy_model::shape::StringShape;
     /// use smithy_model::shape::ShapeProperties;
     /// use smithy_model::shape::ShapeBuilderExt;
-    /// use smithy_model::traits::{Mixin, Trait};
+    /// use smithy_model::traits::{type_refinement::Mixin, Trait};
     ///
     /// let shape = StringShape::builder()
     ///     .id("example.foo#MyString")
@@ -125,7 +127,7 @@ impl<T: ShapeBuilder + Sized> ShapeBuilderExt for T {}
 #[cfg(test)]
 mod tests {
     use crate::shape::{ShapeBuilderExt, ShapeProperties, StringShape};
-    use crate::traits::{Mixin, Trait};
+    use crate::traits::{type_refinement::Mixin, Trait};
 
     #[test]
     fn test_mixin_builder_extension() {

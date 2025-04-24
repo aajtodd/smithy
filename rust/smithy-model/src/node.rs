@@ -585,6 +585,26 @@ impl fmt::Display for Number {
     }
 }
 
+impl From<isize> for Number {
+    fn from(n: isize) -> Self {
+        Number {
+            inner: if n < 0 {
+                Inner::NegInt(n as i64)
+            } else {
+                Inner::PosInt(n as u64)
+            },
+        }
+    }
+}
+
+impl From<usize> for Number {
+    fn from(n: usize) -> Self {
+        Number {
+            inner: Inner::PosInt(n as u64),
+        }
+    }
+}
+
 impl From<i8> for Number {
     fn from(n: i8) -> Self {
         Number {

@@ -335,7 +335,7 @@ impl ShapeMetadataBuilder {
     where
         F: Fn(&Shape) -> bool,
     {
-        use crate::traits::{Mixin, Trait};
+        use crate::traits::{type_refinement::Mixin, Trait};
 
         for mixin in &self.mixins {
             // Validate that the mixin has the @mixin trait
@@ -435,7 +435,7 @@ impl Eq for ShapeMetadata {}
 mod tests {
     use super::*;
     use crate::shape::builder::ShapeBuilderExt;
-    use crate::traits::Documentation;
+    use crate::traits::documentation::Documentation;
     use std::collections::HashMap;
     use std::str::FromStr;
 

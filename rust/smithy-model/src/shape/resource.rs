@@ -1,7 +1,7 @@
 use crate::shape::{
     BuildError, Shape, ShapeBuilder, ShapeMetadata, ShapeMetadataBuilder, ShapeProperties,
 };
-use crate::traits::{Mixin, Trait};
+use crate::traits::{type_refinement::Mixin, Trait};
 use crate::{shape, shape::ShapeId};
 use indexmap::IndexMap;
 

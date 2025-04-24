@@ -471,7 +471,8 @@ mod tests {
     use super::*;
     use crate::shape::builder::ShapeBuilderExt;
     use crate::shape::ShapeId;
-    use crate::traits::{Mixin, Required, Trait};
+    use crate::traits::type_refinement::{Mixin, Required};
+    use crate::traits::Trait;
     use std::str::FromStr;
 
     #[test]

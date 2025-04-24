@@ -15,20 +15,19 @@ use std::fmt;
 use crate::node::Node;
 use crate::shape::ShapeId;
 
-mod deprecated;
-mod documentation;
-mod dynamic;
-mod mixin;
-mod registry;
-mod required;
+pub mod documentation;
 pub mod type_refinement;
 
-pub use deprecated::Deprecated;
-pub use documentation::Documentation;
+mod dynamic;
+mod registry;
+
+#[macro_use]
+mod macros;
+
 pub use dynamic::DynamicTrait;
-pub use mixin::Mixin;
 pub use registry::TraitRegistry;
-pub use required::Required;
+
+pub use define_simple_trait;
 
 /// Type alias for boxed trait objects
 pub type BoxTrait = Box<dyn Trait>;
@@ -100,6 +99,7 @@ pub trait Trait: Any + fmt::Debug {
     /// This method is used when serializing the trait to a Smithy model.
     fn to_node(&self) -> Node;
 
+    // FIXME - this should probably use Result
     /// Create an instance of this trait from a Node
     ///
     /// This method is used when deserializing a trait from a Smithy model.

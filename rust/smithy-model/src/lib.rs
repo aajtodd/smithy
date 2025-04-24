@@ -17,6 +17,7 @@
 
 pub mod error;
 pub mod shape;
+#[macro_use]
 pub mod traits;
 
 pub mod node;

@@ -301,7 +301,7 @@ fn test_service_shape_with_mixins() {
         .unwrap();
 
     // Add @mixin trait to the mixin
-    use crate::traits::Mixin;
+    use crate::traits::type_refinement::Mixin;
     let mut mixin_with_trait = mixin.clone();
     mixin_with_trait
         .metadata
