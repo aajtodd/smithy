@@ -18,6 +18,36 @@ pub struct OperationShape {
     pub errors: Vec<ShapeId>,
 }
 
+impl OperationShape {
+    /// Create a new builder for this shape type.
+    pub fn builder() -> OperationShapeBuilder {
+        OperationShapeBuilder::new()
+    }
+
+    /// Create a builder from this shape.
+    pub fn to_builder(&self) -> OperationShapeBuilder {
+        let mut builder = OperationShape::builder();
+        builder.metadata = self.metadata.to_builder();
+        builder.input = self.input.clone();
+        builder.output = self.output.clone();
+        builder.introduced_errors = self.introduced_errors.clone();
+
+        builder
+    }
+}
+
+impl ProvideShapeMetadata for OperationShape {
+    fn meta(&self) -> &ShapeMetadata {
+        &self.metadata
+    }
+}
+
+impl From<OperationShape> for Shape {
+    fn from(shape: OperationShape) -> Self {
+        Shape::Operation(shape)
+    }
+}
+
 /// Builder for creating an operation shape.
 #[derive(Debug, Default)]
 pub struct OperationShapeBuilder {
@@ -118,36 +148,6 @@ impl OperationShapeBuilder {
 impl ProvideTraitsMut for OperationShapeBuilder {
     fn traits_mut(&mut self) -> &mut TraitMap {
         &mut self.metadata.introduced_traits
-    }
-}
-
-impl OperationShape {
-    /// Create a new builder for this shape type.
-    pub fn builder() -> OperationShapeBuilder {
-        OperationShapeBuilder::new()
-    }
-
-    /// Create a builder from this shape.
-    pub fn to_builder(&self) -> OperationShapeBuilder {
-        let mut builder = OperationShape::builder();
-        builder.metadata = self.metadata.to_builder();
-        builder.input = self.input.clone();
-        builder.output = self.output.clone();
-        builder.introduced_errors = self.introduced_errors.clone();
-
-        builder
-    }
-}
-
-impl ProvideShapeMetadata for OperationShape {
-    fn meta(&self) -> &ShapeMetadata {
-        &self.metadata
-    }
-}
-
-impl From<OperationShape> for Shape {
-    fn from(shape: OperationShape) -> Self {
-        Shape::Operation(shape)
     }
 }
 

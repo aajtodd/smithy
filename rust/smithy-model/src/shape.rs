@@ -136,6 +136,8 @@ impl Shape {
             Shape::List(shape) => shape.members(),
             Shape::Set(shape) => shape.members(),
             Shape::Map(shape) => shape.members(),
+            Shape::Enum(shape) => shape.members(),
+            Shape::IntEnum(shape) => shape.members(),
             _ => Members::empty(),
         }
     }

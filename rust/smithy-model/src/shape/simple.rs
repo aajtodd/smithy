@@ -5,13 +5,14 @@
 
 //! Simple shape types for the Smithy model.
 
+use crate::shape::iter::Members;
 use crate::shape::{
     builder::ProvideTraitsMut, error::BuildError, mixin, HasTraits, MemberShape,
     ProvideShapeMetadata, Shape, ShapeBuilderExt, ShapeMetadata, ShapeMetadataBuilder,
 };
 use crate::traits::{type_refinement::EnumValue, TraitMap};
+use indexmap::IndexMap;
 use paste::paste;
-use std::collections::HashMap;
 use std::hash::Hash;
 
 /// Macro to define a simple shape type with its builder
@@ -191,14 +192,47 @@ define_simple_shape!(
 pub struct EnumShape {
     pub(crate) metadata: ShapeMetadata,
     /// The enum members, keyed by member name
-    pub members: HashMap<String, MemberShape>,
+    pub members: IndexMap<String, MemberShape>,
+}
+
+impl EnumShape {
+    /// Create a new builder for this shape type.
+    pub fn builder() -> EnumShapeBuilder {
+        EnumShapeBuilder::new()
+    }
+
+    /// Returns a Members container for this enum shape.
+    pub fn members(&self) -> Members<'_> {
+        Members::map(&self.members)
+    }
+
+    /// Convert this shape back into a builder
+    pub fn to_builder(self) -> EnumShapeBuilder {
+        // FIXME - we aren't tracking introduced vs inherited members from mixins
+        let mut builder = EnumShape::builder();
+        builder.metadata = self.metadata.to_builder();
+        builder.members = self.members;
+        builder
+    }
+}
+
+impl ProvideShapeMetadata for EnumShape {
+    fn meta(&self) -> &ShapeMetadata {
+        &self.metadata
+    }
+}
+
+impl From<EnumShape> for Shape {
+    fn from(shape: EnumShape) -> Self {
+        Shape::Enum(shape)
+    }
 }
 
 /// Builder for creating an enum shape.
 #[derive(Debug, Default)]
 pub struct EnumShapeBuilder {
     metadata: ShapeMetadataBuilder,
-    members: HashMap<String, MemberShape>,
+    members: IndexMap<String, MemberShape>,
 }
 
 impl EnumShapeBuilder {
@@ -265,49 +299,54 @@ impl ProvideTraitsMut for EnumShapeBuilder {
     }
 }
 
-impl EnumShape {
-    /// Create a new builder for this shape type.
-    pub fn builder() -> EnumShapeBuilder {
-        EnumShapeBuilder::new()
-    }
-
-    /// Convert this shape back into a builder
-    pub fn to_builder(self) -> EnumShapeBuilder {
-        let mut builder = EnumShape::builder();
-        builder.metadata = self.metadata.to_builder();
-        builder.members = self.members;
-
-        builder
-    }
-}
-
-impl ProvideShapeMetadata for EnumShape {
-    fn meta(&self) -> &ShapeMetadata {
-        &self.metadata
-    }
-}
-
-impl From<EnumShape> for Shape {
-    fn from(shape: EnumShape) -> Self {
-        Shape::Enum(shape)
-    }
-}
-
 /// An [intEnum](https://smithy.io/2.0/spec/simple-types.html#intenum) shape
 #[derive(Debug, Clone, PartialEq)]
 pub struct IntEnumShape {
     pub(crate) metadata: ShapeMetadata,
     /// The integer enum members, keyed by member name
-    pub members: HashMap<String, MemberShape>,
+    pub members: IndexMap<String, MemberShape>,
     /// The integer values for each member, keyed by member name
-    pub values: HashMap<String, i64>,
+    pub values: IndexMap<String, i64>,
+}
+
+impl IntEnumShape {
+    /// Create a new builder for this shape type.
+    pub fn builder() -> IntEnumShapeBuilder {
+        IntEnumShapeBuilder::new()
+    }
+
+    /// Returns a Members container for this intEnum shape.
+    pub fn members(&self) -> Members<'_> {
+        Members::map(&self.members)
+    }
+
+    /// Convert this shape back into a builder
+    pub fn to_builder(self) -> IntEnumShapeBuilder {
+        // FIXME - we aren't keeping track of introduced members vs those from mixins here
+        let mut builder = IntEnumShape::builder();
+        builder.metadata = self.metadata.to_builder();
+        builder.members = self.members;
+        builder
+    }
+}
+
+impl ProvideShapeMetadata for IntEnumShape {
+    fn meta(&self) -> &ShapeMetadata {
+        &self.metadata
+    }
+}
+
+impl From<IntEnumShape> for Shape {
+    fn from(shape: IntEnumShape) -> Self {
+        Shape::IntEnum(shape)
+    }
 }
 
 /// Builder for creating an integer enum shape.
 #[derive(Debug, Default)]
 pub struct IntEnumShapeBuilder {
     metadata: ShapeMetadataBuilder,
-    members: HashMap<String, MemberShape>,
+    members: IndexMap<String, MemberShape>,
 }
 
 impl IntEnumShapeBuilder {
@@ -356,7 +395,7 @@ impl IntEnumShapeBuilder {
         let members = mixin::compute_effective_members(self.members, &metadata)?;
 
         // compute the values
-        let values: HashMap<String, i64> = members
+        let values: IndexMap<String, i64> = members
             .iter()
             .map(|(name, member)| {
                 // Check if the member has the EnumValue trait
@@ -385,7 +424,7 @@ impl IntEnumShapeBuilder {
                 // Return the name and parsed value
                 Ok((name.clone(), int_value))
             })
-            .collect::<Result<HashMap<String, i64>, BuildError>>()?;
+            .collect::<Result<IndexMap<String, i64>, BuildError>>()?;
 
         // Validate that we have at least one member after merging
         if members.is_empty() {
@@ -409,7 +448,6 @@ impl IntEnumShapeBuilder {
             }
         }
 
-        // FIXME - we aren't keeping track of introduced members vs those from mixins here
         Ok(IntEnumShape {
             metadata,
             members,
@@ -421,33 +459,6 @@ impl IntEnumShapeBuilder {
 impl ProvideTraitsMut for IntEnumShapeBuilder {
     fn traits_mut(&mut self) -> &mut TraitMap {
         &mut self.metadata.introduced_traits
-    }
-}
-
-impl IntEnumShape {
-    /// Create a new builder for this shape type.
-    pub fn builder() -> IntEnumShapeBuilder {
-        IntEnumShapeBuilder::new()
-    }
-
-    /// Convert this shape back into a builder
-    pub fn to_builder(self) -> IntEnumShapeBuilder {
-        let mut builder = IntEnumShape::builder();
-        builder.metadata = self.metadata.to_builder();
-        builder.members = self.members;
-        builder
-    }
-}
-
-impl ProvideShapeMetadata for IntEnumShape {
-    fn meta(&self) -> &ShapeMetadata {
-        &self.metadata
-    }
-}
-
-impl From<IntEnumShape> for Shape {
-    fn from(shape: IntEnumShape) -> Self {
-        Shape::IntEnum(shape)
     }
 }
 
@@ -507,8 +518,6 @@ mod tests {
         assert!(shape.has_trait(ShapeId::from_str("smithy.api#documentation").unwrap()));
     }
 
-    // FIXME - implement mixin support for simple shapes
-    #[ignore]
     #[test]
     fn test_simple_shape_with_mixins() {
         // Create a mixin string shape with a pattern trait
@@ -548,7 +557,6 @@ mod tests {
             .build();
 
         assert!(result.is_err());
-        // TODO - do we want a better error for this?
     }
 
     // Enum shape tests
@@ -661,15 +669,13 @@ mod tests {
         assert!(result.is_err());
         match result {
             Err(BuildError::InvalidValue { field, reason }) => {
-                assert_eq!(field, "FIRST");
+                assert_eq!(field, "SECOND");
                 assert!(reason.contains("Duplicate integer value: 1"));
             }
             _ => panic!("Expected InvalidValue error"),
         }
     }
 
-    // FIXME - implement mixin support for enum shapes
-    #[ignore]
     #[test]
     fn test_enum_shape_with_mixins() {
         let unit_id = ShapeId::new("smithy.api", "Unit").unwrap();
@@ -711,8 +717,6 @@ mod tests {
         assert!(shape.members.contains_key("MIXIN_MEMBER"));
     }
 
-    // FIXME - implement mixin support for intEnum shapes
-    #[ignore]
     #[test]
     fn test_int_enum_shape_with_mixins() {
         let unit_id = ShapeId::new("smithy.api", "Unit").unwrap();

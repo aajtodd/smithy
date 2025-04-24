@@ -12,7 +12,7 @@ use crate::shape::{
     mixin, MemberShape, ProvideShapeMetadata, Shape, ShapeMetadata, ShapeMetadataBuilder,
 };
 use crate::traits::TraitMap;
-use std::collections::HashMap;
+use indexmap::IndexMap;
 
 /// A [list](https://smithy.io/2.0/spec/aggregate-types.html#list) shape
 #[derive(Debug, Clone, PartialEq)]
@@ -20,6 +20,31 @@ pub struct ListShape {
     pub(crate) metadata: ShapeMetadata,
     /// The member shape that defines the type of elements in the list
     pub member: MemberShape,
+}
+
+impl ListShape {
+    /// Create a new builder for this shape type.
+    pub fn builder() -> ListShapeBuilder {
+        ListShapeBuilder::new()
+    }
+
+    /// Returns the member shape for this list shape.
+    pub fn member(&self) -> &MemberShape {
+        &self.member
+    }
+
+    /// Returns a Members container for this list shape.
+    pub fn members(&self) -> Members<'_> {
+        Members::single(builder::field_names::MEMBER, &self.member)
+    }
+
+    /// Convert this shape back into a builder
+    pub fn to_builder(self) -> ListShapeBuilder {
+        ListShapeBuilder {
+            metadata: self.metadata.to_builder(),
+            member: Some(self.member),
+        }
+    }
 }
 
 /// Builder for creating a list shape.
@@ -67,31 +92,6 @@ impl ProvideTraitsMut for ListShapeBuilder {
     }
 }
 
-impl ListShape {
-    /// Create a new builder for this shape type.
-    pub fn builder() -> ListShapeBuilder {
-        ListShapeBuilder::new()
-    }
-
-    /// Returns the member shape for this list shape.
-    pub fn member(&self) -> &MemberShape {
-        &self.member
-    }
-
-    /// Returns a Members container for this list shape.
-    pub fn members(&self) -> Members<'_> {
-        Members::single(builder::field_names::MEMBER, &self.member)
-    }
-
-    /// Convert this shape back into a builder
-    pub fn to_builder(self) -> ListShapeBuilder {
-        ListShapeBuilder {
-            metadata: self.metadata.to_builder(),
-            member: Some(self.member),
-        }
-    }
-}
-
 /// A [map](https://smithy.io/2.0/spec/aggregate-types.html#map) shape
 #[derive(Debug, Clone, PartialEq)]
 pub struct MapShape {
@@ -100,6 +100,37 @@ pub struct MapShape {
     pub key: MemberShape,
     /// The value member shape
     pub value: MemberShape,
+}
+
+impl MapShape {
+    /// Create a new builder for this shape type.
+    pub fn builder() -> MapShapeBuilder {
+        MapShapeBuilder::new()
+    }
+
+    /// Returns the value member shape for this map
+    pub fn value(&self) -> &MemberShape {
+        &self.value
+    }
+
+    /// Returns the key member shape for this map
+    pub fn key(&self) -> &MemberShape {
+        &self.key
+    }
+
+    /// Returns a Members container for this map shape.
+    pub fn members(&self) -> Members<'_> {
+        Members::key_value(&self.key, &self.value)
+    }
+
+    /// Convert this shape back into a builder
+    pub fn to_builder(self) -> MapShapeBuilder {
+        MapShapeBuilder {
+            metadata: self.metadata.to_builder(),
+            key: Some(self.key),
+            value: Some(self.value),
+        }
+    }
 }
 
 /// Builder for creating a map shape.
@@ -161,43 +192,37 @@ impl ProvideTraitsMut for MapShapeBuilder {
     }
 }
 
-impl MapShape {
-    /// Create a new builder for this shape type.
-    pub fn builder() -> MapShapeBuilder {
-        MapShapeBuilder::new()
-    }
-
-    /// Returns the value member shape for this map
-    pub fn value(&self) -> &MemberShape {
-        &self.value
-    }
-
-    /// Returns the key member shape for this map
-    pub fn key(&self) -> &MemberShape {
-        &self.key
-    }
-
-    /// Returns a Members container for this map shape.
-    pub fn members(&self) -> Members<'_> {
-        Members::key_value(&self.key, &self.value)
-    }
-
-    /// Convert this shape back into a builder
-    pub fn to_builder(self) -> MapShapeBuilder {
-        MapShapeBuilder {
-            metadata: self.metadata.to_builder(),
-            key: Some(self.key),
-            value: Some(self.value),
-        }
-    }
-}
-
 /// A [set](https://smithy.io/2.0/spec/aggregate-types.html#set) shape
 #[derive(Debug, Clone, PartialEq)]
 pub struct SetShape {
     pub(crate) metadata: ShapeMetadata,
     /// The member shape that defines the type of elements in the set
     pub member: MemberShape,
+}
+
+impl SetShape {
+    /// Create a new builder for this shape type.
+    pub fn builder() -> SetShapeBuilder {
+        SetShapeBuilder::new()
+    }
+
+    /// Returns the member shape for this set shape.
+    pub fn member(&self) -> &MemberShape {
+        &self.member
+    }
+
+    /// Returns a Members container for this set shape.
+    pub fn members(&self) -> Members<'_> {
+        Members::single(builder::field_names::MEMBER, &self.member)
+    }
+
+    /// Convert this shape back into a builder
+    pub fn to_builder(self) -> SetShapeBuilder {
+        SetShapeBuilder {
+            metadata: self.metadata.to_builder(),
+            member: Some(self.member),
+        }
+    }
 }
 
 /// Builder for creating a set shape.
@@ -245,44 +270,39 @@ impl ProvideTraitsMut for SetShapeBuilder {
     }
 }
 
-impl SetShape {
-    /// Create a new builder for this shape type.
-    pub fn builder() -> SetShapeBuilder {
-        SetShapeBuilder::new()
-    }
-
-    /// Returns the member shape for this set shape.
-    pub fn member(&self) -> &MemberShape {
-        &self.member
-    }
-
-    /// Returns a Members container for this set shape.
-    pub fn members(&self) -> Members<'_> {
-        Members::single(builder::field_names::MEMBER, &self.member)
-    }
-
-    /// Convert this shape back into a builder
-    pub fn to_builder(self) -> SetShapeBuilder {
-        SetShapeBuilder {
-            metadata: self.metadata.to_builder(),
-            member: Some(self.member),
-        }
-    }
-}
-
 /// A [structure](https://smithy.io/2.0/spec/aggregate-types.html#structure) shape
 #[derive(Debug, Clone, PartialEq)]
 pub struct StructureShape {
     pub(crate) metadata: ShapeMetadata,
     /// The members of the structure, keyed by member name
-    pub members: HashMap<String, MemberShape>,
+    pub members: IndexMap<String, MemberShape>,
+}
+
+impl StructureShape {
+    /// Create a new builder for this shape type.
+    pub fn builder() -> StructureShapeBuilder {
+        StructureShapeBuilder::new()
+    }
+
+    /// Returns a Members container for this structure shape.
+    pub fn members(&self) -> Members<'_> {
+        Members::map(&self.members)
+    }
+
+    /// Convert this shape back into a builder
+    pub fn to_builder(self) -> StructureShapeBuilder {
+        StructureShapeBuilder {
+            metadata: self.metadata.to_builder(),
+            members: self.members,
+        }
+    }
 }
 
 /// Builder for creating a structure shape.
 #[derive(Debug, Default)]
 pub struct StructureShapeBuilder {
     metadata: ShapeMetadataBuilder,
-    members: HashMap<String, MemberShape>,
+    members: IndexMap<String, MemberShape>,
 }
 
 impl StructureShapeBuilder {
@@ -314,7 +334,7 @@ impl StructureShapeBuilder {
 
     /// Remove a member by name from the structure shape (if it exists)
     pub fn remove_member(mut self, member_name: impl AsRef<str>) -> Self {
-        self.members.remove(member_name.as_ref());
+        self.members.shift_remove(member_name.as_ref());
         self
     }
 
@@ -375,39 +395,39 @@ impl ProvideTraitsMut for StructureShapeBuilder {
     }
 }
 
-impl StructureShape {
+/// A [union](https://smithy.io/2.0/spec/aggregate-types.html#union) shape
+#[derive(Debug, Clone, PartialEq)]
+pub struct UnionShape {
+    pub(crate) metadata: ShapeMetadata,
+    /// The members of the union, keyed by member name
+    pub members: IndexMap<String, MemberShape>,
+}
+
+impl UnionShape {
     /// Create a new builder for this shape type.
-    pub fn builder() -> StructureShapeBuilder {
-        StructureShapeBuilder::new()
+    pub fn builder() -> UnionShapeBuilder {
+        UnionShapeBuilder::new()
     }
 
-    /// Returns a Members container for this structure shape.
+    /// Returns a Members container for this union shape.
     pub fn members(&self) -> Members<'_> {
         Members::map(&self.members)
     }
 
     /// Convert this shape back into a builder
-    pub fn to_builder(self) -> StructureShapeBuilder {
-        StructureShapeBuilder {
+    pub fn to_builder(self) -> UnionShapeBuilder {
+        UnionShapeBuilder {
             metadata: self.metadata.to_builder(),
             members: self.members,
         }
     }
 }
 
-/// A [union](https://smithy.io/2.0/spec/aggregate-types.html#union) shape
-#[derive(Debug, Clone, PartialEq)]
-pub struct UnionShape {
-    pub(crate) metadata: ShapeMetadata,
-    /// The members of the union, keyed by member name
-    pub members: HashMap<String, MemberShape>,
-}
-
 /// Builder for creating a union shape.
 #[derive(Debug, Default)]
 pub struct UnionShapeBuilder {
     metadata: ShapeMetadataBuilder,
-    members: HashMap<String, MemberShape>,
+    members: IndexMap<String, MemberShape>,
 }
 
 impl UnionShapeBuilder {
@@ -476,26 +496,6 @@ impl UnionShapeBuilder {
 impl ProvideTraitsMut for UnionShapeBuilder {
     fn traits_mut(&mut self) -> &mut TraitMap {
         &mut self.metadata.introduced_traits
-    }
-}
-
-impl UnionShape {
-    /// Create a new builder for this shape type.
-    pub fn builder() -> UnionShapeBuilder {
-        UnionShapeBuilder::new()
-    }
-
-    /// Returns a Members container for this union shape.
-    pub fn members(&self) -> Members<'_> {
-        Members::map(&self.members)
-    }
-
-    /// Convert this shape back into a builder
-    pub fn to_builder(self) -> UnionShapeBuilder {
-        UnionShapeBuilder {
-            metadata: self.metadata.to_builder(),
-            members: self.members,
-        }
     }
 }
 

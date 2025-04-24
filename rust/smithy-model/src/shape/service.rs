@@ -34,6 +34,27 @@ pub struct ServiceShape {
     pub version: Option<String>,
 }
 
+impl ServiceShape {
+    /// Create a new builder for this shape type.
+    pub fn builder() -> ServiceShapeBuilder {
+        ServiceShapeBuilder::new()
+    }
+}
+
+// Implement ProvideShapeMetadata for all service shapes
+impl ProvideShapeMetadata for ServiceShape {
+    fn meta(&self) -> &ShapeMetadata {
+        &self.metadata
+    }
+}
+
+// Implement From for service shapes
+impl From<ServiceShape> for Shape {
+    fn from(shape: ServiceShape) -> Self {
+        Shape::Service(shape)
+    }
+}
+
 /// Builder for creating a service shape.
 #[derive(Debug, Default)]
 pub struct ServiceShapeBuilder {
@@ -166,27 +187,6 @@ impl ServiceShapeBuilder {
 impl ProvideTraitsMut for ServiceShapeBuilder {
     fn traits_mut(&mut self) -> &mut TraitMap {
         &mut self.metadata.introduced_traits
-    }
-}
-
-impl ServiceShape {
-    /// Create a new builder for this shape type.
-    pub fn builder() -> ServiceShapeBuilder {
-        ServiceShapeBuilder::new()
-    }
-}
-
-// Implement ProvideShapeMetadata for all service shapes
-impl ProvideShapeMetadata for ServiceShape {
-    fn meta(&self) -> &ShapeMetadata {
-        &self.metadata
-    }
-}
-
-// Implement From for service shapes
-impl From<ServiceShape> for Shape {
-    fn from(shape: ServiceShape) -> Self {
-        Shape::Service(shape)
     }
 }
 

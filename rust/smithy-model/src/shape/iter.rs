@@ -7,7 +7,7 @@
 
 use crate::shape::{HasShapeId, MemberShape, Shape};
 use crate::ShapeId;
-use std::collections::HashMap;
+use indexmap::IndexMap;
 use std::ops::Index;
 
 /// A container for accessing the members of a shape.
@@ -21,7 +21,7 @@ pub struct Members<'a> {
 /// Implementation details for the Members container.
 enum MembersImpl<'a> {
     /// For shapes that store members in a HashMap (Structure, Union)
-    HashMap(&'a HashMap<String, MemberShape>),
+    HashMap(&'a IndexMap<String, MemberShape>),
     /// For shapes with a single member (List, Set)
     Single {
         name: &'static str,
@@ -38,7 +38,7 @@ enum MembersImpl<'a> {
 
 impl<'a> Members<'a> {
     /// Create a Members container from a HashMap of members.
-    pub(crate) fn map(map: &'a HashMap<String, MemberShape>) -> Self {
+    pub(crate) fn map(map: &'a IndexMap<String, MemberShape>) -> Self {
         Self {
             inner: MembersImpl::HashMap(map),
         }
@@ -186,7 +186,7 @@ pub struct MemberIter<'a> {
 /// Implementation details for the MemberIter.
 enum MemberIterImpl<'a> {
     /// Iterator for HashMap-based members
-    HashMap(std::collections::hash_map::Values<'a, String, MemberShape>),
+    HashMap(indexmap::map::Values<'a, String, MemberShape>),
     /// Iterator for a single member
     Single(&'a MemberShape, bool),
     /// Iterator for key and value members
@@ -237,7 +237,7 @@ pub struct NameIter<'a> {
 /// Implementation details for the NameIter.
 enum NameIterImpl<'a> {
     /// Iterator for HashMap-based members
-    HashMap(std::collections::hash_map::Keys<'a, String, MemberShape>),
+    HashMap(indexmap::map::Keys<'a, String, MemberShape>),
     /// Iterator for a single member
     Single(&'static str, bool),
     /// Iterator for key and value members
@@ -290,7 +290,7 @@ pub struct NamedIter<'a> {
 /// Implementation details for the NamedIter.
 enum NamedIterImpl<'a> {
     /// Iterator for HashMap-based members
-    HashMap(std::collections::hash_map::Iter<'a, String, MemberShape>),
+    HashMap(indexmap::map::Iter<'a, String, MemberShape>),
     /// Iterator for a single member
     Single {
         name: &'static str,
@@ -528,7 +528,7 @@ mod tests {
 
     #[test]
     fn test_members_hash_map() {
-        let mut map = HashMap::new();
+        let mut map = IndexMap::new();
         map.insert(
             "foo".to_string(),
             MemberShape::builder()

@@ -10,8 +10,7 @@ use crate::shape::iter::Members;
 use crate::shape::{
     HasMixins, HasShapeId, HasTraits, MemberShape, ProvideTraitsMut, Shape, ShapeId, ShapeMetadata,
 };
-use std::collections::HashMap;
-
+use indexmap::IndexMap;
 // FIXME - provide a unified way for builders to add/clear mixins. It's all adhoc right now.
 // FIXME - unify "named member" builders as well for adding/removing members?
 
@@ -20,9 +19,9 @@ use std::collections::HashMap;
 /// This function merges members from mixins with locally defined members,
 /// following the Smithy specification rules for member inheritance and trait precedence.
 pub(crate) fn compute_effective_members(
-    introduced_members: HashMap<String, MemberShape>,
+    introduced_members: IndexMap<String, MemberShape>,
     metadata: &ShapeMetadata,
-) -> Result<HashMap<String, MemberShape>, BuildError> {
+) -> Result<IndexMap<String, MemberShape>, BuildError> {
     if !metadata.mixins.is_empty() {
         let local_members = Members::map(&introduced_members);
         compute_effective_members_impl(&metadata.id, &local_members, &metadata.mixins)
@@ -35,7 +34,7 @@ fn compute_effective_members_impl(
     shape_id: &ShapeId,
     introduced_members: &Members<'_>,
     mixins: &[Shape],
-) -> Result<HashMap<String, MemberShape>, BuildError> {
+) -> Result<IndexMap<String, MemberShape>, BuildError> {
     // If there are no mixins, we can just convert the introduced members to a HashMap
     if mixins.is_empty() {
         return Ok(introduced_members
@@ -45,7 +44,7 @@ fn compute_effective_members_impl(
     }
 
     // Create a map to track computed members
-    let mut computed_members = HashMap::new();
+    let mut computed_members = IndexMap::new();
 
     // Process mixins in order (first to last)
     for mixin in mixins {
@@ -98,7 +97,7 @@ fn process_local_member(
     local_member: &MemberShape,
     mixin_member: &MemberShape,
     mixins: &[Shape],
-    computed_members: &mut HashMap<String, MemberShape>,
+    computed_members: &mut IndexMap<String, MemberShape>,
 ) -> Result<(), BuildError> {
     // Validate that the local member doesn't conflict with the mixin member
     if local_member.target() != mixin_member.target() {
@@ -172,7 +171,7 @@ fn process_existing_mixin_member(
     name: &str,
     previous: MemberShape,
     mixin_member: &MemberShape,
-    computed_members: &mut HashMap<String, MemberShape>,
+    computed_members: &mut IndexMap<String, MemberShape>,
 ) -> Result<(), BuildError> {
     // Validate that the members don't conflict
     if previous.target() != mixin_member.target() {
@@ -233,7 +232,6 @@ mod tests {
     use crate::traits::Documentation;
     use crate::traits::Required;
     use crate::traits::Trait;
-    use std::collections::HashMap;
 
     // Helper function to create a test structure shape with the given ID and members
     fn create_structure(id: &str, members: Vec<(&'static str, &'static str)>) -> StructureShape {
@@ -339,8 +337,7 @@ mod tests {
             effective_members["mixin_member"].id().to_string(),
             "example#Test$mixin_member"
         );
-        // FIXME - mixins() returns &[Shape]
-        // let x = effective_members["mixin_member"].mixins().iter().map(|s| s.id()).any(|s| *s == ShapeId::new_unchecked("example#Mixin$mixin_member"));
+
         assert!(effective_members["mixin_member"]
             .mixins()
             .contains(&ShapeId::new_unchecked("example#Mixin$mixin_member")));
@@ -437,7 +434,7 @@ mod tests {
         let mixin = create_structure("example#Mixin", vec![("conflict", "smithy.api#String")]);
 
         // Create structure with conflicting local member
-        let mut structure_members = HashMap::new();
+        let mut structure_members = IndexMap::new();
         let member = MemberShape::builder()
             .id("example#Test$conflict")
             .member_name("conflict")
@@ -527,7 +524,7 @@ mod tests {
             .unwrap();
 
         // Create structure with local member that has a different documentation trait
-        let mut structure_members = HashMap::new();
+        let mut structure_members = IndexMap::new();
         let local_member = create_member_with_traits(
             "example#Test$member",
             "member",

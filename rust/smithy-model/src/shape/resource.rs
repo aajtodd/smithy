@@ -3,14 +3,14 @@ use crate::shape::{
 };
 use crate::traits::{Mixin, Trait, TraitMap};
 use crate::{shape, ShapeId};
-use std::collections::HashMap;
+use indexmap::IndexMap;
 
 /// A [resource](https://smithy.io/2.0/spec/service-types.html#resource) shape
 #[derive(Debug, Clone, PartialEq)]
 pub struct ResourceShape {
     pub(crate) metadata: ShapeMetadata,
     /// The identifiers for this resource
-    pub identifiers: HashMap<String, ShapeId>,
+    pub identifiers: IndexMap<String, ShapeId>,
     /// The create operation for this resource, if any
     pub create: Option<ShapeId>,
     /// The read operation for this resource, if any
@@ -73,7 +73,7 @@ impl From<ResourceShape> for Shape {
 #[derive(Debug, Default)]
 pub struct ResourceShapeBuilder {
     metadata: ShapeMetadataBuilder,
-    identifiers: HashMap<String, ShapeId>,
+    identifiers: IndexMap<String, ShapeId>,
     create: Option<ShapeId>,
     read: Option<ShapeId>,
     update: Option<ShapeId>,
