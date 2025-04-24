@@ -11,6 +11,7 @@ use crate::shape::{
     ShapeMetadataBuilder, ShapeProperties,
 };
 use crate::traits::type_refinement::EnumValue;
+use crate::traits::Trait;
 use indexmap::IndexMap;
 use paste::paste;
 use std::hash::Hash;
@@ -187,6 +188,8 @@ pub struct EnumShape {
     pub(crate) metadata: ShapeMetadata,
     /// The enum members, keyed by member name
     pub members: IndexMap<String, MemberShape>,
+    /// The enum values, keyed by member name
+    pub values: IndexMap<String, String>,
 }
 
 impl EnumShape {
@@ -203,10 +206,10 @@ impl EnumShape {
     /// Convert this shape back into a builder
     pub fn to_builder(self) -> EnumShapeBuilder {
         // FIXME - we aren't tracking introduced vs inherited members from mixins
-        let mut builder = EnumShape::builder();
-        builder.metadata = self.metadata.to_builder();
-        builder.members = self.members;
-        builder
+        EnumShapeBuilder {
+            metadata: self.metadata.to_builder(),
+            members: self.members,
+        }
     }
 }
 
@@ -243,17 +246,16 @@ impl EnumShapeBuilder {
 
     /// Add a member to the enum shape.
     pub fn member(mut self, member: MemberShape) -> Self {
-        // FIXME - need the equivalent of this java
-        // if (!member.getTarget().equals(UnitTypeTrait.UNIT)) {
-        //     throw new SourceException(String.format(
-        //         "Enum members may only target `smithy.api#Unit`, but found `%s`",
-        //         member.getTarget()), getSourceLocation());
-        // }
-        // if (!member.hasTrait(EnumValueTrait.ID)) {
-        //     member = member.toBuilder()
-        //         .addTrait(EnumValueTrait.builder().stringValue(member.getMemberName()).build())
-        //         .build();
-        // }
+        let member = if !member.has_trait(EnumValue::static_id()) {
+            let name = member.member_name.clone();
+            member
+                .to_builder()
+                .with_trait(EnumValue::new(name))
+                .build()
+                .unwrap()
+        } else {
+            member
+        };
 
         self.members.insert(member.member_name.clone(), member);
         self
@@ -277,7 +279,26 @@ impl EnumShapeBuilder {
             });
         }
 
-        Ok(EnumShape { metadata, members })
+        // FIXME - need the equivalent of this java
+        // if (!member.getTarget().equals(UnitTypeTrait.UNIT)) {
+        //     throw new SourceException(String.format(
+        //         "Enum members may only target `smithy.api#Unit`, but found `%s`",
+        //         member.getTarget()), getSourceLocation());
+        // }
+
+        let values = members
+            .iter()
+            .map(|(name, member)| {
+                let value = member.expect_trait::<EnumValue>().0.clone();
+                (name.clone(), value)
+            })
+            .collect::<IndexMap<String, String>>();
+
+        Ok(EnumShape {
+            metadata,
+            members,
+            values,
+        })
     }
 }
 
@@ -560,6 +581,7 @@ mod tests {
                 MemberShape::builder()
                     .id("example.foo#MyEnum$SECOND")
                     .member_name("SECOND")
+                    .with_trait(EnumValue::new("second"))
                     .target(unit_id.clone())
                     .build()
                     .unwrap(),
@@ -569,8 +591,10 @@ mod tests {
 
         assert_eq!(shape.id().to_string(), "example.foo#MyEnum");
         assert_eq!(shape.members.len(), 2);
-        assert!(shape.members.contains_key("FIRST"));
-        assert!(shape.members.contains_key("SECOND"));
+        assert!(shape.members().contains("FIRST"));
+        assert!(shape.members().contains("SECOND"));
+        assert_eq!(shape.values.get("FIRST").unwrap(), "FIRST");
+        assert_eq!(shape.values.get("SECOND").unwrap(), "second");
     }
 
     #[test]

@@ -40,20 +40,19 @@ impl ResourceShape {
     }
 
     /// Create a builder for this shape.
-    pub fn to_builder(&self) -> ResourceShapeBuilder {
-        let mut builder = ResourceShape::builder();
-        builder.metadata = self.metadata.to_builder();
-        builder.identifiers = self.identifiers.clone();
-        builder.create = self.create.clone();
-        builder.read = self.read.clone();
-        builder.update = self.update.clone();
-        builder.delete = self.delete.clone();
-        builder.list = self.list.clone();
-        builder.introduced_operations = self.introduced_operations.clone();
-        builder.collection_operations = self.collection_operations.clone();
-        builder.introduced_resources = self.introduced_resources.clone();
-
-        builder
+    pub fn to_builder(self) -> ResourceShapeBuilder {
+        ResourceShapeBuilder {
+            metadata: self.metadata.to_builder(),
+            identifiers: self.identifiers,
+            create: self.create,
+            read: self.read,
+            update: self.update,
+            delete: self.delete,
+            list: self.list,
+            introduced_operations: self.introduced_operations,
+            collection_operations: self.collection_operations,
+            introduced_resources: self.introduced_resources,
+        }
     }
 }
 

@@ -25,14 +25,13 @@ impl OperationShape {
     }
 
     /// Create a builder from this shape.
-    pub fn to_builder(&self) -> OperationShapeBuilder {
-        let mut builder = OperationShape::builder();
-        builder.metadata = self.metadata.to_builder();
-        builder.input = self.input.clone();
-        builder.output = self.output.clone();
-        builder.introduced_errors = self.introduced_errors.clone();
-
-        builder
+    pub fn to_builder(self) -> OperationShapeBuilder {
+        OperationShapeBuilder {
+            metadata: self.metadata.to_builder(),
+            input: self.input,
+            output: self.output,
+            introduced_errors: self.introduced_errors,
+        }
     }
 }
 

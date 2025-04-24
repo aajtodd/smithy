@@ -37,6 +37,17 @@ impl ServiceShape {
     pub fn builder() -> ServiceShapeBuilder {
         ServiceShapeBuilder::new()
     }
+
+    /// Create a builder from this shape.
+    pub fn to_builder(self) -> ServiceShapeBuilder {
+        ServiceShapeBuilder {
+            metadata: self.metadata.to_builder(),
+            introduced_operations: self.introduced_operations,
+            introduced_resources: self.introduced_resources,
+            introduced_errors: self.introduced_errors,
+            introduced_version: self.introduced_version,
+        }
+    }
 }
 
 impl ShapeProperties for ServiceShape {

@@ -403,11 +403,6 @@ impl UnionShape {
         Members::map(&self.members)
     }
 
-    // FIXME - we may want to have a get_member(&self, name: impl AsRef<str>) -> Option<&MemberShape> to avoid
-    // issues with lifetimes and Members iterator
-    // e.g.
-    // let foo_member = shape.members().get("foo").unwrap(); // error: doesn't live long enough
-
     /// Convert this shape back into a builder
     pub fn to_builder(self) -> UnionShapeBuilder {
         UnionShapeBuilder {
