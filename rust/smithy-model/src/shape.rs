@@ -95,6 +95,9 @@ pub enum Shape {
     Member(MemberShape),
 }
 
+// TODO - consider separating these traits into ProvideMetadata and ProvideMetadataMut,
+//        renaming ShapeProperties to ShapeExt, and collapsing ShapeBuilder and ShapeBuilderExt into one.
+
 /// Trait for accessing properties common to all shapes
 pub trait ShapeProperties {
     /// Get the shape metadata
