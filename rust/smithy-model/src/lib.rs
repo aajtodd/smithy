@@ -29,8 +29,33 @@ pub use error::{Error, Result};
 // TODO - define our prelude
 
 // TODO - unit type
-// TODO - define macro(s) for common trait types like annotation, or single string/value
-// TODO - organize traits into modules based on spec (e.g. constraint, refine, behavior, resource, etc)
+// TODO - consider how to commonize named member builders/access
+//        - perhaps a simple macro and change from IndexMap to Members and change the members() function to return something else or &Members?
+//        - expand capability of Members to add/remove members and combine with simple macro?
+/*
+e.g.
+
+struct Members { ... }
+
+fn members(&self) -> &Members;
+
+impl Members {
+
+    fn add_member(&mut self, member: MemberShape) { ... }
+    fn remove_member(&mut self, member_id: impl AsRef<ShapeId>) { ... }
+    fn clear_members(&mut self) { ... }
+    fn get_member(&self, name: impl AsRef<str>) -> Option<&MemberShape>
+    ...
+}
+
+struct StructureShapeBuilder {
+    members: Members,
+    ...
+}
+
+derive_named_members_builder(StructureShapeBuilder);
+
+ */
 // TODO - resources are likely needing attention
 // TODO - can probably commonize service/resource shapes (e.g. Java EntityShape(Builder))
 // TODO - define model (container) APIs

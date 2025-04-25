@@ -280,6 +280,78 @@ The design is documented in detail in `trait-design.md` and will be implemented 
    - Fluent interface for better readability
    - Avoids string parsing for programmatically created selectors
 
+## Mixin Implementation (2025-04-25)
+
+We implemented support for Smithy mixins, which allow shapes to inherit members and traits from other shapes.
+
+### Key Design Decisions
+
+1. **Mixin Storage in ShapeMetadata**
+   - Stored mixins as a `Vec<Shape>` in `ShapeMetadata`
+   - Added `introduced_traits` and `effective_traits` fields to track traits directly applied to a shape vs. those inherited from mixins
+   - Implemented `compute_effective_traits` function to merge traits from mixins with proper precedence
+
+2. **Member Resolution for Aggregate Shapes**
+   - Implemented `compute_effective_members` function to merge members from mixins with local members
+   - Added validation to ensure member targets are compatible when merging
+   - Improved error messages to provide context about which shape, member, and mixin are involved in conflicts
+
+3. **Trait Consolidation**
+   - Consolidated `HasShapeId`, `HasTraits`, and `HasMixins` traits into a single `ShapeProperties` trait
+   - Simplified the API by providing a consistent interface for all shapes
+   - Added methods for accessing both introduced and effective traits
+
+4. **Builder Pattern Enhancement**
+   - Consolidated `ShapeBuilderExt` and `ProvideTraitsMut` into a single `ShapeBuilder` trait
+   - Added methods for adding, removing, and clearing mixins
+   - Implemented validation to ensure mixins have the `@mixin` trait and are of the correct shape type
+
+5. **Trait Macro for Simple Traits**
+   - Created a `define_trait` macro to reduce boilerplate when implementing simple traits
+   - Supported string, boolean, annotation, number, and array trait types
+   - Used `$crate` metavariable to ensure proper hygiene in the macro
+
+### Implementation Challenges
+
+1. **Member Conflict Resolution**
+   - Needed to detect and report conflicts when a mixin and local shape define the same member with different targets
+   - Solution: Added validation in `compute_effective_members` with detailed error messages
+
+2. **Trait Precedence**
+   - Needed to ensure traits from local shapes take precedence over traits from mixins
+   - Solution: Implemented proper ordering in `compute_effective_traits`
+
+3. **Mixin Validation**
+   - Needed to validate that mixins have the `@mixin` trait and are of the correct shape type
+   - Solution: Added validation in shape builders' `build` methods
+
+4. **Enum and IntEnum Special Handling**
+   - Needed special handling for enum and intEnum shapes that have additional value fields
+   - Solution: Implemented custom logic in their builders to compute values from members
+
+### Shape with Members Commonization
+
+We explored approaches to reduce duplication in shapes with named members (structure, union, enum, intEnum):
+
+#### Trait-Based Approach
+- Considered creating `HasMembers` and `MembersBuilder` traits
+- Would provide common methods for accessing and manipulating members
+- Concern: Requires users to import additional traits
+
+#### Macro-Based Approach
+- Proposed `define_shape_with_members!` and `define_enum_shape!` macros
+- Would generate common member-related functionality for each shape type
+- Benefits: No additional imports, consistent API, reduced duplication
+- Chosen as the preferred approach for its cleaner API and consistency with existing patterns
+
+### Final Design Benefits
+
+1. **Consistency**: All shapes have a consistent API for accessing ID, traits, and mixins
+2. **Simplicity**: Consolidated traits make the API easier to understand and use
+3. **Flexibility**: Support for complex mixin scenarios with proper validation
+4. **Maintainability**: Reduced duplication through macros and common functionality
+5. **Compatibility**: Full compliance with the Smithy specification for mixins
+
 ## Document Organization
 
 During the design process, we identified that the trait implementation was incorrectly placed under the Parser Design section in the detailed design document. We restructured the document to move the trait implementation to the Core Model Representation section where it logically belongs.
@@ -292,14 +364,15 @@ We also added the Model Container Design as a subsection of the Core Model Repre
 
 1. **Iterative Refinement**: Starting with a high-level design and progressively refining it based on feedback
    - Example: Beginning with general trait implementation approaches and narrowing down to specific design decisions
+   - Example: Exploring different approaches for commonizing shapes with members before settling on a macro-based solution
 
 2. **Questioning Assumptions**: Challenging initial assumptions led to simpler, more effective designs
    - Example: Questioning the need for trait inheritance led to a simpler relationship model
-   - Example: Clarifying the distinction between Model Container and Core Model Representation
+   - Example: Reconsidering the need for separate traits for ID, traits, and mixins led to a consolidated API
 
 3. **Balancing Theory and Practice**: Combining theoretical design principles with practical implementation concerns
    - Example: Balancing the elegance of type-safe APIs with the practicality of dynamic loading
-   - Example: Considering both API ergonomics and performance implications of immutability
+   - Example: Considering both API ergonomics and implementation complexity when choosing between traits and macros
 
 4. **Breaking Down Complex Problems**: Addressing one aspect of the design at a time
    - Example: Separately discussing trait representation, conflict handling, and serialization
@@ -308,17 +381,17 @@ We also added the Model Container Design as a subsection of the Core Model Repre
 ### AI Assistance Value
 
 1. **Design Exploration**: AI helped explore multiple design alternatives with code examples
-   - Presented enum-based, trait-based, and hybrid approaches for shape representation
-   - Outlined dynamic, type-safe, and hybrid approaches for trait implementation
-   - Proposed different model container designs with pros and cons
+   - Presented trait-based and macro-based approaches for commonizing shapes with members
+   - Outlined different approaches for implementing mixins
+   - Proposed different trait macro designs with pros and cons
 
 2. **Trade-off Analysis**: AI provided pros and cons for each design alternative
-   - Helped evaluate performance implications, API ergonomics, and implementation complexity
-   - Presented considerations for thread safety, reasoning about code, and consistency
+   - Helped evaluate API ergonomics, implementation complexity, and maintenance burden
+   - Presented considerations for usability, flexibility, and consistency
 
 3. **Knowledge Integration**: AI connected Rust-specific patterns with Smithy concepts
-   - Showed how to leverage Rust's type system while respecting Smithy's design
-   - Applied Rust idioms like builder patterns and immutable data structures to Smithy concepts
+   - Showed how to leverage Rust's macro system for generating repetitive code
+   - Applied Rust idioms like builder patterns and trait objects to Smithy concepts
 
 4. **Documentation**: AI helped structure and document design decisions with rationales
    - Created clear explanations of why specific approaches were chosen
