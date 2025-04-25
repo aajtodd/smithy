@@ -117,30 +117,27 @@ pub fn to_builder(self) -> StructureShapeBuilder {
 
 ### Shape Builder Updates
 
-- [ ] **BUILD-1**: Update `StructureShapeBuilder.build()` to validate member IDs
+- [x] **BUILD-1**: Update `StructureShapeBuilder.build()` to validate member IDs
   - Build metadata first to get a valid ShapeId
-  - Call `validate_member_shape_ids` with the shape ID and members
+  - Call `validate_member_shape_ids` with `shape.members()`
 
-- [ ] **BUILD-2**: Update `UnionShapeBuilder.build()` to validate member IDs
+- [x] **BUILD-2**: Update `UnionShapeBuilder.build()` to validate member IDs
   - Follow the same pattern as `StructureShapeBuilder.build()`
 
-- [ ] **BUILD-3**: Update `EnumShapeBuilder.build()` to validate member IDs
+- [x] **BUILD-3**: Update `EnumShapeBuilder.build()` to validate member IDs
   - Follow the same pattern as `StructureShapeBuilder.build()`
 
-- [ ] **BUILD-4**: Update `IntEnumShapeBuilder.build()` to validate member IDs
+- [x] **BUILD-4**: Update `IntEnumShapeBuilder.build()` to validate member IDs
   - Follow the same pattern as `StructureShapeBuilder.build()`
 
-- [ ] **BUILD-5**: Update `ListShapeBuilder.build()` to validate its single member ID
-  - Use the `Members` container version of the validation function
-  - Call `validate_member_shape_ids_with_members` with `shape.members()`
+- [x] **BUILD-5**: Update `ListShapeBuilder.build()` to validate its single member ID
+  - Follow the same pattern as `StructureShapeBuilder.build()`
 
-- [ ] **BUILD-6**: Update `SetShapeBuilder.build()` to validate its single member ID
-  - Use the `Members` container version of the validation function
-  - Call `validate_member_shape_ids_with_members` with `shape.members()`
+- [x] **BUILD-6**: Update `SetShapeBuilder.build()` to validate its single member ID
+  - Follow the same pattern as `StructureShapeBuilder.build()`
 
-- [ ] **BUILD-7**: Update `MapShapeBuilder.build()` to validate its key and value member IDs
-  - Use the `Members` container version of the validation function
-  - Call `validate_member_shape_ids_with_members` with `shape.members()`
+- [x] **BUILD-7**: Update `MapShapeBuilder.build()` to validate its key and value member IDs
+  - Follow the same pattern as `StructureShapeBuilder.build()`
 
 ### to_builder() Method Updates
 

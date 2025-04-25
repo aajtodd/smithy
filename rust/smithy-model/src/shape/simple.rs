@@ -7,7 +7,7 @@
 
 use crate::shape::iter::Members;
 use crate::shape::{
-    error::BuildError, mixin, MemberShape, Shape, ShapeBuilder, ShapeMetadata,
+    builder, error::BuildError, mixin, MemberShape, Shape, ShapeBuilder, ShapeMetadata,
     ShapeMetadataBuilder, ShapeProperties,
 };
 use crate::traits::type_refinement::EnumValue;
@@ -284,12 +284,12 @@ impl EnumShapeBuilder {
 
     /// Build the enum shape.
     pub fn build(self) -> Result<EnumShape, BuildError> {
-        // Validate that mixins are of the same shape type
         self.metadata
             .validate_mixins(|shape| matches!(shape, Shape::Enum(_)), "enum")?;
 
-        // Build the metadata
         let metadata = self.metadata.build()?;
+
+        builder::validate_member_shape_ids(&metadata.id, &Members::map(&self.members))?;
 
         let members = mixin::compute_effective_members(self.members, &metadata)?;
 
@@ -422,12 +422,13 @@ impl IntEnumShapeBuilder {
 
     /// Build the integer enum shape.
     pub fn build(self) -> Result<IntEnumShape, BuildError> {
-        // Validate that mixins are of the same shape type
         self.metadata
             .validate_mixins(|shape| matches!(shape, Shape::IntEnum(_)), "intEnum")?;
 
-        // Build the metadata
         let metadata = self.metadata.build()?;
+
+        builder::validate_member_shape_ids(&metadata.id, &Members::map(&self.members))?;
+
         let members = mixin::compute_effective_members(self.members, &metadata)?;
 
         // compute the values

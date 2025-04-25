@@ -85,6 +85,11 @@ impl ListShapeBuilder {
             .member
             .ok_or_else(|| required_field_error(field_names::MEMBER))?;
 
+        builder::validate_member_shape_ids(
+            &metadata.id,
+            &Members::single(field_names::MEMBER, &member),
+        )?;
+
         Ok(ListShape { metadata, member })
     }
 }
@@ -183,9 +188,12 @@ impl MapShapeBuilder {
         let key = self
             .key
             .ok_or_else(|| required_field_error(field_names::KEY))?;
+
         let value = self
             .value
             .ok_or_else(|| required_field_error(field_names::VALUE))?;
+
+        builder::validate_member_shape_ids(&metadata.id, &Members::key_value(&key, &value))?;
 
         Ok(MapShape {
             metadata,
@@ -274,6 +282,11 @@ impl SetShapeBuilder {
         let member = self
             .member
             .ok_or_else(|| required_field_error(field_names::MEMBER))?;
+
+        builder::validate_member_shape_ids(
+            &metadata.id,
+            &Members::single(field_names::MEMBER, &member),
+        )?;
 
         Ok(SetShape { metadata, member })
     }
@@ -372,6 +385,9 @@ impl StructureShapeBuilder {
             .validate_mixins(|shape| matches!(shape, Shape::Structure(_)), "structure")?;
 
         let metadata = self.metadata.build()?;
+
+        builder::validate_member_shape_ids(&metadata.id, &Members::map(&self.members))?;
+
         let members = mixin::compute_effective_members(self.members, &metadata)?;
 
         Ok(StructureShape { metadata, members })
@@ -471,6 +487,9 @@ impl UnionShapeBuilder {
             .validate_mixins(|shape| matches!(shape, Shape::Union(_)), "union")?;
 
         let metadata = self.metadata.build()?;
+
+        builder::validate_member_shape_ids(&metadata.id, &Members::map(&self.members))?;
+
         let members = mixin::compute_effective_members(self.members, &metadata)?;
 
         Ok(UnionShape { metadata, members })
