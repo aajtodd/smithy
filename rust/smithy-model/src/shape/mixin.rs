@@ -269,6 +269,33 @@ fn create_member_from_mixin(
     builder.build()
 }
 
+/// Separates members into those that should be included in a builder and those that shouldn't.
+///
+/// Members are included in the builder if:
+/// 1. They weren't inherited from mixins, OR
+/// 2. They have locally introduced traits
+///
+/// Returns a new IndexMap containing only the members that should be included in the builder.
+/// If no members were inherited from mixins, returns the original map to avoid unnecessary copying.
+pub(crate) fn separate_mixin_members(
+    members: IndexMap<String, MemberShape>,
+) -> IndexMap<String, MemberShape> {
+    if members.values().all(|member| member.mixins().is_empty()) {
+        return members;
+    }
+
+    // filter out members that were inherited from mixins
+    let mut builder_members = IndexMap::new();
+
+    for (name, member) in members {
+        if member.mixins().is_empty() || !member.introduced_traits().is_empty() {
+            builder_members.insert(name, member);
+        }
+    }
+
+    builder_members
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

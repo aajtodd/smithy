@@ -105,12 +105,12 @@ pub fn to_builder(self) -> StructureShapeBuilder {
 
 ### Utility Functions
 
-- [ ] **UTIL-1**: Add `validate_member_shape_ids` function to `shape/builder.rs`
+- [x] **UTIL-1**: Add `validate_member_shape_ids` function to `shape/builder.rs`
   - Validates that member shape IDs follow the format `parentShapeId$memberName`
   - Returns a `BuildError` with a descriptive message if validation fails
   - Consider implementing a version that works with the `Members` container
 
-- [ ] **UTIL-2**: Add `separate_mixin_members` function to `shape/mixin.rs`
+- [x] **UTIL-2**: Add `separate_mixin_members` function to `shape/mixin.rs`
   - Separates members that should be included in a builder from those inherited from mixins
   - Includes members that weren't inherited from mixins or have locally introduced traits
   - Optimizes by returning the original map if no filtering is needed
