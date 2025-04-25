@@ -46,7 +46,7 @@ This crate implements the semantic model of Smithy, handling the validated and p
 
 Key files:
 * src/lib.rs - Main library entry point
-* src/shape_id.rs - Implementation of ShapeId, the unique identifier for shapes
+* src/shape/shape_id.rs - Implementation of ShapeId, the unique identifier for shapes
 * src/shape.rs - Core shape implementations and interfaces
 * src/traits.rs - Implementation of Smithy traits (metadata attached to shapes)
 * src/error.rs - Error types for model operations
@@ -59,7 +59,11 @@ Subdirectories:
   * `service.rs` - Service shape
   * `operation.rs` - Operation shape
   * `resource.rs` - resource shape
-* src/traits/ - Contains implementations of specific trait types
+* src/traits/ - Contains implementations of specific trait types, traits are mostly organized based on how the smithy specification is organized
+  * `type_refinement` - type refinement traits (`enumValue`, `mixin`, `required`, etc)
+  * `documentation` - documentation traits (`documentation`, `deprecated`, etc)
+  * `constraint` - constraint traits (`length`, `pattern`, etc.)
+  * `behavior` - behavior traits (`readonly`, `paginated`, etc.)
 
 ### Smithy AST (smithy-ast/)
 This crate handles the Abstract Syntax Tree representation and parsing of the Smithy IDL.

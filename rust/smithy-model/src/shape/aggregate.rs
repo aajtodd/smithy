@@ -443,6 +443,27 @@ impl UnionShapeBuilder {
         self
     }
 
+    /// Replace the members on the union
+    pub fn members(mut self, members: impl IntoIterator<Item = MemberShape>) -> Self {
+        self.members.clear();
+        for member in members.into_iter() {
+            self.members.insert(member.member_name.clone(), member);
+        }
+        self
+    }
+
+    /// Remove a member by name from the union shape (if it exists)
+    pub fn remove_member(mut self, member_name: impl AsRef<str>) -> Self {
+        self.members.shift_remove(member_name.as_ref());
+        self
+    }
+
+    /// Remove all members from the union shape
+    pub fn clear_members(mut self) -> Self {
+        self.members.clear();
+        self
+    }
+
     /// Build the union shape.
     pub fn build(self) -> Result<UnionShape, BuildError> {
         // Validate mixins before building
