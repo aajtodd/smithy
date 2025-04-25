@@ -10,7 +10,6 @@ use crate::shape::iter::Members;
 use crate::shape::{MemberShape, Shape, ShapeBuilder, ShapeId, ShapeMetadata, ShapeProperties};
 use crate::traits::{type_refinement::Mixin, Trait, TraitMap};
 use indexmap::IndexMap;
-// FIXME - unify "named member" builders as well for adding/removing members?
 
 /// Compute effective traits for a shape, including those from mixins
 pub(crate) fn compute_effective_traits(introduced_traits: &TraitMap, mixins: &[Shape]) -> TraitMap {
@@ -43,7 +42,8 @@ pub(crate) fn compute_effective_traits(introduced_traits: &TraitMap, mixins: &[S
 
 /// Get traits from a mixin, excluding local traits and the mixin trait itself
 fn get_mixin_traits(mixin: &Shape) -> TraitMap {
-    let mut traits = mixin.introduced_traits().clone();
+    // use effective traits over introduced since a mixin can compose other mixins
+    let mut traits = mixin.traits().clone();
 
     // Remove the @mixin trait
     traits.remove(Mixin::static_id());
@@ -236,10 +236,10 @@ fn process_existing_mixin_member(
     let mut builder = previous.to_builder();
     builder = builder.mixin(mixin_member.clone());
 
-    // Add traits from the mixin member
-    for (_, trait_obj) in mixin_member.traits().iter() {
-        builder.traits_mut().insert(trait_obj.clone_trait());
-    }
+    // // Add traits from the mixin member
+    // for (_, trait_obj) in mixin_member.traits().iter() {
+    //     builder.traits_mut().insert(trait_obj.clone_trait());
+    // }
 
     computed_members.insert(name.to_string(), builder.build()?);
     Ok(())
@@ -255,18 +255,12 @@ fn create_member_from_mixin(
     name: &str,
     mixin_member: &MemberShape,
 ) -> Result<MemberShape, BuildError> {
-    let mut builder = MemberShape::builder()
+    MemberShape::builder()
         .id(format!("{}${}", shape_id, name))
         .member_name(name.to_string())
         .target(mixin_member.target().clone())
-        .mixin(mixin_member.clone());
-
-    // Copy traits from the mixin member
-    for (_, trait_obj) in mixin_member.traits().iter() {
-        builder.traits_mut().insert(trait_obj.clone_trait());
-    }
-
-    builder.build()
+        .mixin(mixin_member.clone())
+        .build()
 }
 
 /// Separates members into those that should be included in a builder and those that shouldn't.

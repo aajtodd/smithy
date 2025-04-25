@@ -26,42 +26,16 @@ pub use node::Node;
 
 pub use error::{Error, Result};
 
-// TODO - define our prelude
-
-// TODO - unit type
+// TODO - either hide all shape members and force going through accessors (e.g. exposing IndexMap is not desired)
+// TODO - shape builders with members should allow querying for members as well, it's only possible to add/remove currently
 // TODO - consider how to commonize named member builders/access
-//        - perhaps a simple macro and change from IndexMap to Members and change the members() function to return something else or &Members?
-//        - expand capability of Members to add/remove members and combine with simple macro?
-/*
-e.g.
-
-struct Members { ... }
-
-fn members(&self) -> &Members;
-
-impl Members {
-
-    fn add_member(&mut self, member: MemberShape) { ... }
-    fn remove_member(&mut self, member_id: impl AsRef<ShapeId>) { ... }
-    fn clear_members(&mut self) { ... }
-    fn get_member(&self, name: impl AsRef<str>) -> Option<&MemberShape>
-    ...
-}
-
-struct StructureShapeBuilder {
-    members: Members,
-    ...
-}
-
-derive_named_members_builder(StructureShapeBuilder);
-
- */
 // TODO - resources are likely needing attention
 // TODO - can probably commonize service/resource shapes (e.g. Java EntityShape(Builder))
 // TODO - define model (container) APIs
 // TODO - model parsing
 // TODO - model loading/assembly
 // TODO - model validation framework
-// TODO - trait macro(s) for defining simple traits
+// TODO - unit type
 // TODO - additional traits
 // TODO - cleanup our errors, they should probably all have shape ID references when appropriate and possibly source locations, etc.
+// TODO - define our prelude

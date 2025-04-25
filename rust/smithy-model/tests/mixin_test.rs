@@ -13,6 +13,9 @@ use smithy_model::traits::documentation::Documentation;
 use smithy_model::traits::type_refinement::{Mixin, Required};
 use smithy_model::traits::Trait;
 
+// TODO - once we can load a model from IDL we should shore up our tests from the Java reference implementation
+//      - also add tests specifically for trait precedence with the example shown in the spec https://smithy.io/2.0/spec/mixins.html#traits-and-mixins
+
 #[test]
 fn test_structure_shape_mixins() {
     // Create a mixin structure with members and traits
@@ -775,4 +778,201 @@ fn test_mixin_redefined_member() {
 
     // Verify that the member has the required trait from the local definition
     assert!(member.has_trait(Required::static_id()));
+}
+#[test]
+fn test_structure_shape_to_builder_with_mixins() {
+    // Create a mixin structure with members and traits
+    let mixin_member = MemberShape::builder()
+        .id("example#MixinStruct$mixinMember")
+        .member_name("mixinMember")
+        .target(ShapeId::new_static("smithy.api", "String"))
+        .documentation("Mixin member documentation")
+        .build()
+        .unwrap();
+
+    let mixin = StructureShape::builder()
+        .id("example#MixinStruct")
+        .member(mixin_member)
+        .documentation("Mixin documentation")
+        .with_trait(Mixin::new())
+        .build()
+        .unwrap();
+
+    // Create a structure that uses the mixin
+    let local_member = MemberShape::builder()
+        .id("example#MyStruct$localMember")
+        .member_name("localMember")
+        .target(ShapeId::new_static("smithy.api", "Integer"))
+        .required()
+        .build()
+        .unwrap();
+
+    let structure = StructureShape::builder()
+        .id("example#MyStruct")
+        .member(local_member)
+        .mixin(mixin.clone())
+        .documentation("Local documentation")
+        .build()
+        .unwrap();
+
+    // Verify that the structure has both members
+    assert_eq!(structure.members().len(), 2);
+    assert!(structure.members().contains("mixinMember"));
+    assert!(structure.members().contains("localMember"));
+
+    // Convert back to a builder and build again without the mixin
+    let structure2 = structure.to_builder().remove_mixin(mixin).build().unwrap();
+
+    // Should only have the local member
+    assert_eq!(structure2.members().len(), 1);
+    assert!(structure2.members().contains("localMember"));
+    assert!(!structure2.members().contains("mixinMember"));
+}
+
+#[test]
+fn test_union_shape_to_builder_with_mixins() {
+    // Create a mixin union with members and traits
+    let mixin_member = MemberShape::builder()
+        .id("example#MixinUnion$mixinMember")
+        .member_name("mixinMember")
+        .target(ShapeId::new_static("smithy.api", "String"))
+        .documentation("Mixin member documentation")
+        .build()
+        .unwrap();
+
+    let mixin = UnionShape::builder()
+        .id("example#MixinUnion")
+        .member(mixin_member)
+        .documentation("Mixin documentation")
+        .with_trait(Mixin::new())
+        .build()
+        .unwrap();
+
+    // Create a union that uses the mixin
+    let local_member = MemberShape::builder()
+        .id("example#MyUnion$localMember")
+        .member_name("localMember")
+        .target(ShapeId::new_static("smithy.api", "Integer"))
+        .required()
+        .build()
+        .unwrap();
+
+    let union = UnionShape::builder()
+        .id("example#MyUnion")
+        .member(local_member)
+        .mixin(mixin.clone())
+        .documentation("Local documentation")
+        .build()
+        .unwrap();
+
+    // Verify that the union has both members
+    assert_eq!(union.members().len(), 2);
+    assert!(union.members().contains("mixinMember"));
+    assert!(union.members().contains("localMember"));
+
+    // Convert back to a builder and build again without the mixin
+    let union2 = union.to_builder().remove_mixin(mixin).build().unwrap();
+
+    // Should only have the local member
+    assert_eq!(union2.members().len(), 1);
+    assert!(union2.members().contains("localMember"));
+    assert!(!union2.members().contains("mixinMember"));
+}
+#[test]
+fn test_enum_shape_to_builder_with_mixins() {
+    // Create a mixin enum with members
+    let unit_id = ShapeId::new_static("smithy.api", "Unit");
+
+    let mixin_member = MemberShape::builder()
+        .id("example#MixinEnum$MIXIN_MEMBER")
+        .member_name("MIXIN_MEMBER")
+        .target(unit_id.clone())
+        .build()
+        .unwrap();
+
+    let mixin = smithy_model::shape::EnumShape::builder()
+        .id("example#MixinEnum")
+        .member(mixin_member)
+        .with_trait(Mixin::new())
+        .build()
+        .unwrap();
+
+    // Create an enum that uses the mixin
+    let local_member = MemberShape::builder()
+        .id("example#MyEnum$LOCAL_MEMBER")
+        .member_name("LOCAL_MEMBER")
+        .target(unit_id.clone())
+        .build()
+        .unwrap();
+
+    let enum_shape = smithy_model::shape::EnumShape::builder()
+        .id("example#MyEnum")
+        .member(local_member)
+        .mixin(mixin.clone())
+        .build()
+        .unwrap();
+
+    // Verify that the enum has both members
+    assert_eq!(enum_shape.members().len(), 2);
+    assert!(enum_shape.members().contains("MIXIN_MEMBER"));
+    assert!(enum_shape.members().contains("LOCAL_MEMBER"));
+
+    // Convert back to a builder and build again without the mixin
+    let enum_shape2 = enum_shape.to_builder().remove_mixin(mixin).build().unwrap();
+
+    // Should only have the local member
+    assert_eq!(enum_shape2.members().len(), 1);
+    assert!(enum_shape2.members().contains("LOCAL_MEMBER"));
+    assert!(!enum_shape2.members().contains("MIXIN_MEMBER"));
+}
+#[test]
+fn test_int_enum_shape_to_builder_with_mixins() {
+    // Create a mixin int enum with members
+    let unit_id = ShapeId::new_static("smithy.api", "Unit");
+
+    let mixin_member = MemberShape::builder()
+        .id("example#MixinIntEnum$MIXIN_MEMBER")
+        .member_name("MIXIN_MEMBER")
+        .target(unit_id.clone())
+        .build()
+        .unwrap();
+
+    let mixin = smithy_model::shape::IntEnumShape::builder()
+        .id("example#MixinIntEnum")
+        .member(mixin_member, 1)
+        .with_trait(Mixin::new())
+        .build()
+        .unwrap();
+
+    // Create an int enum that uses the mixin
+    let local_member = MemberShape::builder()
+        .id("example#MyIntEnum$LOCAL_MEMBER")
+        .member_name("LOCAL_MEMBER")
+        .target(unit_id.clone())
+        .build()
+        .unwrap();
+
+    let int_enum_shape = smithy_model::shape::IntEnumShape::builder()
+        .id("example#MyIntEnum")
+        .member(local_member, 2)
+        .mixin(mixin.clone())
+        .build()
+        .unwrap();
+
+    // Verify that the int enum has both members
+    assert_eq!(int_enum_shape.members().len(), 2);
+    assert!(int_enum_shape.members().contains("MIXIN_MEMBER"));
+    assert!(int_enum_shape.members().contains("LOCAL_MEMBER"));
+
+    // Convert back to a builder and build again without the mixin
+    let int_enum_shape2 = int_enum_shape
+        .to_builder()
+        .remove_mixin(mixin)
+        .build()
+        .unwrap();
+
+    // Should only have the local member
+    assert_eq!(int_enum_shape2.members().len(), 1);
+    assert!(int_enum_shape2.members().contains("LOCAL_MEMBER"));
+    assert!(!int_enum_shape2.members().contains("MIXIN_MEMBER"));
 }

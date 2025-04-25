@@ -63,6 +63,12 @@ impl From<ServiceShape> for Shape {
     }
 }
 
+impl AsRef<ShapeId> for ServiceShape {
+    fn as_ref(&self) -> &ShapeId {
+        &self.metadata.id
+    }
+}
+
 /// Builder for creating a service shape.
 #[derive(Debug, Default)]
 pub struct ServiceShapeBuilder {

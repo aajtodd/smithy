@@ -167,7 +167,7 @@ pub fn to_builder(self) -> StructureShapeBuilder {
         let mixin_member = MemberShape::builder()
             .id("example#MixinStruct$mixinMember")
             .member_name("mixinMember")
-            .target(shape_id("smithy.api", "String"))
+            .target(ShapeId::new_unchecked("smithy.api#String"))
             .documentation("Mixin member documentation")
             .build()
             .unwrap();
@@ -184,7 +184,7 @@ pub fn to_builder(self) -> StructureShapeBuilder {
         let local_member = MemberShape::builder()
             .id("example#MyStruct$localMember")
             .member_name("localMember")
-            .target(shape_id("smithy.api", "Integer"))
+            .target(ShapeId::new_unchecked("smithy.api#Integer"))
             .required()
             .build()
             .unwrap();
@@ -210,8 +210,8 @@ pub fn to_builder(self) -> StructureShapeBuilder {
         assert!(!structure_builder.members.contains_key("mixinMember"));
         assert!(structure_builder.members.contains_key("localMember"));
 
-        // Build again without adding the mixin
-        let structure2 = structure_builder.build().unwrap();
+        // Build again after removing the mixin
+        let structure2 = structure_builder.remove_mixin(mixin).build().unwrap();
         
         // Should only have the local member
         assert_eq!(structure2.members().len(), 1);

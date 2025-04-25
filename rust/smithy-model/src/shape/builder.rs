@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-//! Builder traits for creating Smithy shapes.
+//! Extensions and utils for creating Smithy shapes.
 
 use std::str::FromStr;
 

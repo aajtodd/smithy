@@ -68,6 +68,12 @@ impl From<ResourceShape> for Shape {
     }
 }
 
+impl AsRef<ShapeId> for ResourceShape {
+    fn as_ref(&self) -> &ShapeId {
+        &self.metadata.id
+    }
+}
+
 /// Builder for creating a resource shape.
 #[derive(Debug, Default)]
 pub struct ResourceShapeBuilder {

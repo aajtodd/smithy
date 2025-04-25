@@ -47,6 +47,12 @@ impl From<OperationShape> for Shape {
     }
 }
 
+impl AsRef<ShapeId> for OperationShape {
+    fn as_ref(&self) -> &ShapeId {
+        &self.metadata.id
+    }
+}
+
 /// Builder for creating an operation shape.
 #[derive(Debug, Default)]
 pub struct OperationShapeBuilder {

@@ -351,16 +351,16 @@ mod tests {
 
         // Test creating trait instance
         let deprecated = TestDeprecated(true);
-        assert_eq!(deprecated.0, true);
+        assert!(deprecated.0);
 
         // Test to_node
         let node = deprecated.to_node();
-        assert!(matches!(node, Node::Bool(b) if b == true));
+        assert!(matches!(node, Node::Bool(b) if b));
 
         // Test from_node with valid node
         let bool_node = Node::Bool(false);
         let parsed = TestDeprecated::from_node(&bool_node).unwrap();
-        assert_eq!(parsed.0, false);
+        assert!(!parsed.0);
 
         // Test from_node with invalid node
         let string_node = Node::String("invalid".to_string());
@@ -369,7 +369,7 @@ mod tests {
         // Test clone_trait
         let cloned = deprecated.clone_trait();
         let downcast = cloned.as_any().downcast_ref::<TestDeprecated>().unwrap();
-        assert_eq!(downcast.0, true);
+        assert!(downcast.0);
     }
 
     #[test]

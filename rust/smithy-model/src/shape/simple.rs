@@ -7,7 +7,7 @@
 
 use crate::shape::iter::Members;
 use crate::shape::{
-    builder, error::BuildError, mixin, MemberShape, Shape, ShapeBuilder, ShapeMetadata,
+    builder, error::BuildError, mixin, MemberShape, Shape, ShapeBuilder, ShapeId, ShapeMetadata,
     ShapeMetadataBuilder, ShapeProperties,
 };
 use crate::traits::type_refinement::EnumValue;
@@ -53,6 +53,12 @@ macro_rules! define_simple_shape {
             impl From<$shape_name> for Shape {
                 fn from(shape: $shape_name) -> Self {
                     Shape::$shape_variant(shape)
+                }
+            }
+
+            impl AsRef<ShapeId> for $shape_name {
+                fn as_ref(&self) -> &ShapeId {
+                    &self.metadata.id
                 }
             }
 
@@ -224,6 +230,12 @@ impl From<EnumShape> for Shape {
     }
 }
 
+impl AsRef<ShapeId> for EnumShape {
+    fn as_ref(&self) -> &ShapeId {
+        &self.metadata.id
+    }
+}
+
 /// Builder for creating an enum shape.
 #[derive(Debug, Default)]
 pub struct EnumShapeBuilder {
@@ -367,6 +379,12 @@ impl ShapeProperties for IntEnumShape {
 impl From<IntEnumShape> for Shape {
     fn from(shape: IntEnumShape) -> Self {
         Shape::IntEnum(shape)
+    }
+}
+
+impl AsRef<ShapeId> for IntEnumShape {
+    fn as_ref(&self) -> &ShapeId {
+        &self.metadata.id
     }
 }
 

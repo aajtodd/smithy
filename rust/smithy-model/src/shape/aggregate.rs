@@ -6,7 +6,7 @@
 //! Aggregate shape types for the Smithy model.
 
 use crate::shape::{
-    builder, error::BuildError, iter::Members, mixin, MemberShape, Shape, ShapeBuilder,
+    builder, error::BuildError, iter::Members, mixin, MemberShape, Shape, ShapeBuilder, ShapeId,
     ShapeMetadata, ShapeMetadataBuilder, ShapeProperties,
 };
 use indexmap::IndexMap;
@@ -47,6 +47,12 @@ impl ListShape {
 impl ShapeProperties for ListShape {
     fn metadata(&self) -> &ShapeMetadata {
         &self.metadata
+    }
+}
+
+impl AsRef<ShapeId> for ListShape {
+    fn as_ref(&self) -> &ShapeId {
+        &self.metadata.id
     }
 }
 
@@ -144,6 +150,12 @@ impl MapShape {
 impl ShapeProperties for MapShape {
     fn metadata(&self) -> &ShapeMetadata {
         &self.metadata
+    }
+}
+
+impl AsRef<ShapeId> for MapShape {
+    fn as_ref(&self) -> &ShapeId {
+        &self.metadata.id
     }
 }
 
@@ -248,6 +260,12 @@ impl ShapeProperties for SetShape {
     }
 }
 
+impl AsRef<ShapeId> for SetShape {
+    fn as_ref(&self) -> &ShapeId {
+        &self.metadata.id
+    }
+}
+
 /// Builder for creating a set shape.
 #[derive(Debug, Default)]
 pub struct SetShapeBuilder {
@@ -329,6 +347,12 @@ impl StructureShape {
 impl ShapeProperties for StructureShape {
     fn metadata(&self) -> &ShapeMetadata {
         &self.metadata
+    }
+}
+
+impl AsRef<ShapeId> for StructureShape {
+    fn as_ref(&self) -> &ShapeId {
+        &self.metadata.id
     }
 }
 
@@ -431,6 +455,12 @@ impl UnionShape {
 impl ShapeProperties for UnionShape {
     fn metadata(&self) -> &ShapeMetadata {
         &self.metadata
+    }
+}
+
+impl AsRef<ShapeId> for UnionShape {
+    fn as_ref(&self) -> &ShapeId {
+        &self.metadata.id
     }
 }
 
