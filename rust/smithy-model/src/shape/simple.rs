@@ -205,10 +205,9 @@ impl EnumShape {
 
     /// Convert this shape back into a builder
     pub fn to_builder(self) -> EnumShapeBuilder {
-        // FIXME - we aren't tracking introduced vs inherited members from mixins
         EnumShapeBuilder {
             metadata: self.metadata.to_builder(),
-            members: self.members,
+            members: mixin::separate_mixin_members(self.members),
         }
     }
 }
@@ -352,11 +351,10 @@ impl IntEnumShape {
 
     /// Convert this shape back into a builder
     pub fn to_builder(self) -> IntEnumShapeBuilder {
-        // FIXME - we aren't keeping track of introduced members vs those from mixins here
-        let mut builder = IntEnumShape::builder();
-        builder.metadata = self.metadata.to_builder();
-        builder.members = self.members;
-        builder
+        IntEnumShapeBuilder {
+            metadata: self.metadata.to_builder(),
+            members: mixin::separate_mixin_members(self.members),
+        }
     }
 }
 

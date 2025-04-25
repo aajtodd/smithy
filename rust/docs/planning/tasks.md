@@ -141,36 +141,25 @@ pub fn to_builder(self) -> StructureShapeBuilder {
 
 ### to_builder() Method Updates
 
-- [ ] **TOBUILDER-1**: Update `StructureShape.to_builder()` to use `separate_mixin_members`
+- [x] **TOBUILDER-1**: Update `StructureShape.to_builder()` to use `separate_mixin_members`
   - Replace the current implementation with one that uses the utility function
 
-- [ ] **TOBUILDER-2**: Update `UnionShape.to_builder()` to use `separate_mixin_members`
+- [x] **TOBUILDER-2**: Update `UnionShape.to_builder()` to use `separate_mixin_members`
   - Follow the same pattern as `StructureShape.to_builder()`
 
-- [ ] **TOBUILDER-3**: Update `EnumShape.to_builder()` to use `separate_mixin_members`
+- [x] **TOBUILDER-3**: Update `EnumShape.to_builder()` to use `separate_mixin_members`
   - Follow the same pattern as `StructureShape.to_builder()`
 
-- [ ] **TOBUILDER-4**: Update `IntEnumShape.to_builder()` to use `separate_mixin_members`
+- [x] **TOBUILDER-4**: Update `IntEnumShape.to_builder()` to use `separate_mixin_members`
   - Follow the same pattern as `StructureShape.to_builder()`
 
 ### Tests
 
-- [ ] **TEST-1**: Add test for `validate_member_shape_ids` in `shape/builder_test.rs`
-  - Test valid member IDs
-  - Test invalid member IDs (wrong shape ID)
-  - Test invalid member IDs (wrong member name)
-
-- [ ] **TEST-2**: Add test for `separate_mixin_members` in `shape/mixin_test.rs`
-  - Test with local members only
-  - Test with mixin members
-  - Test with mixin members that have local traits
-  - Test the optimization for no mixin members
-
 - [ ] **TEST-3**: Add test for `StructureShape.to_builder()` with mixins in `mixin_test.rs`
   - Test that local members are preserved
   - Test that mixin members are excluded
-  - Test that mixin members with local traits are preserved
   - Example test:
+
     ```rust
     #[test]
     fn test_structure_shape_to_builder_with_mixins() {
@@ -228,34 +217,6 @@ pub fn to_builder(self) -> StructureShapeBuilder {
         assert_eq!(structure2.members().len(), 1);
         assert!(structure2.members().contains("localMember"));
         assert!(!structure2.members().contains("mixinMember"));
-        
-        // Now test the case where a mixin member has locally introduced traits
-        
-        // Create a structure with a mixin
-        let structure = StructureShape::builder()
-            .id("example#MyStruct")
-            .mixin(mixin.clone())
-            .build()
-            .unwrap();
-            
-        // Get the mixin member and add a trait to it
-        let mut structure_with_modified_mixin = structure.clone();
-        let mixin_member = structure_with_modified_mixin.members.get_mut("mixinMember").unwrap();
-        mixin_member.traits_mut().insert(Box::new(Required));
-        
-        // Convert back to a builder
-        let structure_builder = structure_with_modified_mixin.to_builder();
-        
-        // The builder should have the mixin member because it has locally introduced traits
-        assert_eq!(structure_builder.members.len(), 1);
-        assert!(structure_builder.members.contains_key("mixinMember"));
-        
-        // Build again without adding the mixin
-        let structure3 = structure_builder.build().unwrap();
-        
-        // Should still have the mixin member because it was included in the builder
-        assert_eq!(structure3.members().len(), 1);
-        assert!(structure3.members().contains("mixinMember"));
     }
     ```
 

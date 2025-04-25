@@ -321,7 +321,7 @@ impl StructureShape {
     pub fn to_builder(self) -> StructureShapeBuilder {
         StructureShapeBuilder {
             metadata: self.metadata.to_builder(),
-            members: self.members,
+            members: mixin::separate_mixin_members(self.members),
         }
     }
 }
@@ -423,7 +423,7 @@ impl UnionShape {
     pub fn to_builder(self) -> UnionShapeBuilder {
         UnionShapeBuilder {
             metadata: self.metadata.to_builder(),
-            members: self.members,
+            members: mixin::separate_mixin_members(self.members),
         }
     }
 }
