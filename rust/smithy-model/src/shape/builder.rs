@@ -8,8 +8,9 @@
 use std::str::FromStr;
 
 use crate::shape::error::BuildError;
-use crate::shape::ShapeBuilder;
+use crate::shape::iter::Members;
 use crate::shape::ShapeId;
+use crate::shape::{ShapeBuilder, ShapeProperties};
 use crate::traits::documentation::Documentation;
 use crate::traits::type_refinement::{Mixin, Required};
 
@@ -44,6 +45,34 @@ pub(crate) fn parse_shape_id(id_str: &str) -> Result<ShapeId, BuildError> {
         field: field_names::ID.to_string(),
         reason: format!("{}", e),
     })
+}
+
+/// Validates that member shape IDs belong to the parent shape.
+///
+/// This function checks that each member's shape ID follows the format `parentShapeId$memberName`,
+/// where `parentShapeId` is the ID of the parent shape and `memberName` is the name of the member.
+pub(crate) fn validate_member_shape_ids(
+    shape_id: &ShapeId,
+    members: &Members<'_>,
+) -> Result<(), BuildError> {
+    for (name, member) in members.iter_named() {
+        let member_id = member.id();
+        if member_id.namespace() != shape_id.namespace()
+            || member_id.name() != shape_id.name()
+            || member_id.member() != Some(name)
+        {
+            return Err(BuildError::InvalidValue {
+                field: name.to_string(),
+                reason: format!(
+                    "Expected the `{name}` member of `{shape_id}` to have an ID of `{shape_id}${name}` but found `{member_id}`",
+                    name = name,
+                    shape_id = shape_id,
+                    member_id = member_id,
+                ),
+            });
+        }
+    }
+    Ok(())
 }
 
 /// Extension trait for shape builders with common trait methods.
@@ -126,8 +155,10 @@ impl<T: ShapeBuilder + Sized> ShapeBuilderExt for T {}
 
 #[cfg(test)]
 mod tests {
-    use crate::shape::{ShapeBuilderExt, ShapeProperties, StringShape};
+    use super::*;
+    use crate::shape::{MemberShape, ShapeBuilderExt, ShapeId, ShapeProperties, StringShape};
     use crate::traits::{type_refinement::Mixin, Trait};
+    use indexmap::IndexMap;
 
     #[test]
     fn test_mixin_builder_extension() {
@@ -140,5 +171,76 @@ mod tests {
         assert!(shape.has_trait(Mixin::static_id()));
         let mixin_trait = shape.get_trait_as::<Mixin>().unwrap();
         assert!(mixin_trait.local_traits.is_empty());
+    }
+
+    #[test]
+    fn test_validate_member_shape_ids() {
+        // Create a parent shape ID
+        let parent_id = ShapeId::new("example", "MyStruct").unwrap();
+
+        // Create a valid member
+        let valid_member = MemberShape::builder()
+            .id("example#MyStruct$validMember")
+            .member_name("validMember")
+            .target(ShapeId::new("smithy.api", "String").unwrap())
+            .build()
+            .unwrap();
+
+        // Create an invalid member with wrong namespace
+        let wrong_namespace_member = MemberShape::builder()
+            .id("wrong#MyStruct$wrongNamespace")
+            .member_name("wrongNamespace")
+            .target(ShapeId::new("smithy.api", "String").unwrap())
+            .build()
+            .unwrap();
+
+        // Create an invalid member with wrong shape name
+        let wrong_shape_name_member = MemberShape::builder()
+            .id("example#WrongShape$wrongShapeName")
+            .member_name("wrongShapeName")
+            .target(ShapeId::new("smithy.api", "String").unwrap())
+            .build()
+            .unwrap();
+
+        // Create an invalid member with wrong member name
+        let wrong_member_name = MemberShape::builder()
+            .id("example#MyStruct$wrongName")
+            .member_name("correctName")
+            .target(ShapeId::new("smithy.api", "String").unwrap())
+            .build()
+            .unwrap();
+
+        // Test with a valid member
+        let mut members_map = IndexMap::new();
+        members_map.insert("validMember".to_string(), valid_member);
+        let members = Members::map(&members_map);
+        assert!(validate_member_shape_ids(&parent_id, &members).is_ok());
+
+        // Test with wrong namespace
+        let mut members_map = IndexMap::new();
+        members_map.insert("wrongNamespace".to_string(), wrong_namespace_member);
+        let members = Members::map(&members_map);
+        let result = validate_member_shape_ids(&parent_id, &members);
+        assert!(result.is_err());
+        if let Err(BuildError::InvalidValue { field, reason }) = result {
+            assert_eq!(field, "wrongNamespace");
+            assert!(reason.contains("Expected the `wrongNamespace` member of `example#MyStruct`"));
+        } else {
+            panic!("Expected InvalidValue error");
+        }
+
+        // Test with wrong shape name
+        let mut members_map = IndexMap::new();
+        members_map.insert("wrongShapeName".to_string(), wrong_shape_name_member);
+        let members = Members::map(&members_map);
+        let result = validate_member_shape_ids(&parent_id, &members);
+        assert!(result.is_err());
+
+        // Test with wrong member name
+        let mut members_map = IndexMap::new();
+        members_map.insert("correctName".to_string(), wrong_member_name);
+        let members = Members::map(&members_map);
+        let result = validate_member_shape_ids(&parent_id, &members);
+        assert!(result.is_err());
     }
 }

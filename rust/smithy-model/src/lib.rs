@@ -64,3 +64,4 @@ derive_named_members_builder(StructureShapeBuilder);
 // TODO - model validation framework
 // TODO - trait macro(s) for defining simple traits
 // TODO - additional traits
+// TODO - cleanup our errors, they should probably all have shape ID references when appropriate and possibly source locations, etc.

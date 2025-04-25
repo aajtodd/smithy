@@ -1,135 +1,289 @@
-# Implementation Plan
+# Implementation Tasks
 
-* Remember to use our workflow instructions to complete tasks.
+This document outlines the tasks for implementing features and improvements in the Smithy Rust project.
 
-## Current Focus: Mixin Implementation
+## Current Focus: Member ID Validation and Mixin Member Separation
 
-* Reference the design in [mixin-design.md](mixin-design.md)
-* Mixin spec (from the root of our rust project folder): `../docs/source-2.0/spec/mixins.rst`
+### Implementation Approach
 
-### Mixin Implementation Tasks
+#### Member ID Validation
 
-#### Phase 1: Core Components
+We'll implement a utility function to validate that member shape IDs follow the format `parentShapeId$memberName`. This function will be used in the `build()` method of all shape builders that have members.
 
-1. **MIXIN-001: Define the Mixin trait**
-   - Create the `Mixin` struct in `traits/mod.rs`
-   - Implement the `Trait` trait for `Mixin`
-   - Add unit tests for the `Mixin` trait
+```rust
+/// Validates that member shape IDs belong to the parent shape
+pub(crate) fn validate_member_shape_ids(
+  shape_id: &ShapeId,
+  members: Members<'_>
+) -> Result<(), BuildError> {
+  for (name, member) in members.iter_named() {
+    let member_id = member.id();
+    if member_id.namespace() != shape_id.namespace() || member_id.name() != shape_id.name() {
+      return Err(BuildError::InvalidValue {
+        field: name.to_string(),
+        reason: format!(
+          "Expected the `{name}` member of `{shape_id}` to have an ID of `{shape_id}${name}` but found `{member_id}`",
+          name = name,
+          shape_id = shape_id,
+          member_id = member.id(),
+        ),
+      });
+    }
+  }
+  Ok(())
+}
+```
 
-2. **MIXIN-002: Update ShapeMetadata to support mixins**
-   - Add `introduced_traits`, `effective_traits`, and `mixins` fields to `ShapeMetadata`
-   - Update `ShapeMetadata::new` to initialize these fields
-   - Add `add_mixin` method to `ShapeMetadata`
+#### Mixin Member Separation
 
-3. **MIXIN-003: Update HasTraits trait**
-   - Add `introduced_traits` method to `HasTraits` trait
-   - Update the blanket implementation to return the appropriate fields
-   - Update existing code that uses `traits()` if necessary
+We'll implement a utility function to separate members that should be included in a builder from those inherited from mixins. This function will be used in the `to_builder()` method of all shapes with members.
 
-4. **MIXIN-004: Add HasMixins trait**
-   - Create the `HasMixins` trait in `shape.rs`
-   - Add blanket implementation for types that implement `ProvideShapeMetadata`
-   - Add unit tests for the `HasMixins` trait
+```rust
+/// Separates members into those that should be included in a builder and those that shouldn't.
+/// 
+/// Members are included in the builder if:
+/// 1. They weren't inherited from mixins, OR
+/// 2. They have locally introduced traits
+///
+/// Returns a new IndexMap containing only the members that should be included in the builder.
+/// If no members were inherited from mixins, returns the original map to avoid unnecessary copying.
+pub fn separate_mixin_members(members: IndexMap<String, MemberShape>) -> IndexMap<String, MemberShape> {
+    // Quick check: if there are no members with mixins, we can return the original map
+    if members.values().all(|member| member.mixins().is_empty()) {
+        return members;
+    }
+    
+    // Otherwise, we need to filter out members that were inherited from mixins and have no local traits
+    let mut builder_members = IndexMap::new();
+    
+    for (name, member) in members {
+        if member.mixins().is_empty() || !member.introduced_traits().is_empty() {
+            builder_members.insert(name, member);
+        }
+    }
+    
+    builder_members
+}
+```
 
-5. **MIXIN-005: Add mixin utility to ShapeBuilderExt**
-   - Add `mixin` method to `ShapeBuilderExt` trait
-   - Add unit tests for the `mixin` method
+#### Example Usage in Shape Builders
 
-#### Phase 2: Shape Builder Implementation
+For the `build()` method:
 
-6. **MIXIN-006: Update StructureShapeBuilder for mixins**
-   - Add `mixins` field to `StructureShapeBuilder`
-   - Add `mixin` method to add a mixin to the builder
-   - Update the `build` method to validate mixins
-   - Add unit tests for the updated builder
+```rust
+pub fn build(self) -> Result<StructureShape, BuildError> {
+    // Validate mixins before building
+    self.metadata
+        .validate_mixins(|shape| matches!(shape, Shape::Structure(_)), "structure")?;
 
-7. **MIXIN-007: Update UnionShapeBuilder for mixins**
-   - Add `mixins` field to `UnionShapeBuilder`
-   - Add `mixin` method to add a mixin to the builder
-   - Update the `build` method to validate mixins
-   - Add unit tests for the updated builder
+    // Build metadata first to get a valid ShapeId
+    let metadata = self.metadata.build()?;
 
-8. **MIXIN-008: Update ServiceShape and ServiceShapeBuilder for mixins**
-   - Add `mixin` method to add a mixin to the builder
-   - Add `introduced_version` field to the `ServiceShape`
-   - Add `introduced_rename` field to the `ServiceShape`
-   - Add `introduced_resources` field 
-   - Add `introduced_operations` field
-   - Add missing `error` method to add a common error to `ServiceShapeBuilder`
-   - Add missing `errors` method to add multiple common errors to `ServiceShapeBuilder`
-   - Add `introduced_errors` field to the `ServiceShape`
-   - Update the `build` method to validate mixins
-   - Add unit tests for the updated builder
+    // Validate member shape IDs
+    builder::validate_member_shape_ids(&metadata.id, &self.members)?;
 
-9. **MIXIN-009: Update ResourceShapeBuilder for mixins**
-   - Add `mixin` method to add a mixin to the builder
-   - Update the `build` method to validate mixins
-   - Add `introduced_resources` field to track resources applied directly vs effective (including mixins)
-   - Add `introduced_operations` field to track operations applied directly vs effective (including mixins)
-   - Add missing `collection_operations` field 
-   - Add unit tests for the updated builder
+    // Compute effective members
+    let members = mixin::compute_effective_members(self.members, &metadata)?;
 
-10. **MIXIN-010: Update OperationShapeBuilder for mixins**
-    - Add `mixin` method to add a mixin to the builder
-    - Add `introduced_errors` field to `OperationShape` to track resources applied directly to the operation shape vs effective (including mixins)
-    - Update the `build` method to validate mixins
-      - Operation mixins cannot target anything other than the unit shape for input and output fields. 
-    - Add unit tests for the updated builder
+    Ok(StructureShape { 
+        metadata, 
+        members,
+    })
+}
+```
 
-11. **MIXIN-011: Update simple shape builders for mixins**
-    - Add mixin support to simple shape builders (String, Boolean, etc.)
-    - Add unit tests for the updated builders
+For the `to_builder()` method:
 
-#### Phase 3: Mixin Resolution Functions
+```rust
+pub fn to_builder(self) -> StructureShapeBuilder {
+    StructureShapeBuilder {
+        metadata: self.metadata.to_builder(),
+        members: mixin::separate_mixin_members(self.members),
+    }
+}
+```
 
-At this point we've mostly added support for being able to add mixins to a shape but we now have to fill in 
-actually consuming the mixin in each shape (applying traits, coping members, etc). 
+### Utility Functions
 
-12. **MIXIN-012: Implement cycle detection**
-    - Create a function to detect cycles in mixin references
-    - Add unit tests for cycle detection
+- [ ] **UTIL-1**: Add `validate_member_shape_ids` function to `shape/builder.rs`
+  - Validates that member shape IDs follow the format `parentShapeId$memberName`
+  - Returns a `BuildError` with a descriptive message if validation fails
+  - Consider implementing a version that works with the `Members` container
 
-13. **MIXIN-013: Implement trait resolution**
-    - Create a function to compute effective traits from mixins
-    - Add unit tests for trait resolution
+- [ ] **UTIL-2**: Add `separate_mixin_members` function to `shape/mixin.rs`
+  - Separates members that should be included in a builder from those inherited from mixins
+  - Includes members that weren't inherited from mixins or have locally introduced traits
+  - Optimizes by returning the original map if no filtering is needed
 
-14. **MIXIN-014: Implement member resolution for structures**
-    - Create a function to compute effective members for structures
-    - Add unit tests for member resolution
+### Shape Builder Updates
 
-15. **MIXIN-015: Implement member resolution for unions**
-    - Create a function to compute effective members for unions
-    - Add unit tests for member resolution
+- [ ] **BUILD-1**: Update `StructureShapeBuilder.build()` to validate member IDs
+  - Build metadata first to get a valid ShapeId
+  - Call `validate_member_shape_ids` with the shape ID and members
 
-16. **MIXIN-016: Implement property resolution for services**
-    - Create a function to merge service properties from mixins
-    - Add unit tests for service property resolution
+- [ ] **BUILD-2**: Update `UnionShapeBuilder.build()` to validate member IDs
+  - Follow the same pattern as `StructureShapeBuilder.build()`
 
-17. **MIXIN-017: Implement property resolution for operations**
-    - Create a function to merge operation properties from mixins
-    - Add unit tests for operation property resolution
+- [ ] **BUILD-3**: Update `EnumShapeBuilder.build()` to validate member IDs
+  - Follow the same pattern as `StructureShapeBuilder.build()`
 
-#### Phase 4: Integration and Testing
+- [ ] **BUILD-4**: Update `IntEnumShapeBuilder.build()` to validate member IDs
+  - Follow the same pattern as `StructureShapeBuilder.build()`
 
-18. **MIXIN-018: Add comprehensive integration tests**
-    - Create tests for complex mixin scenarios
-    - Test trait inheritance and precedence
-    - Test member inheritance and conflicts
-    - Test cycle detection
+- [ ] **BUILD-5**: Update `ListShapeBuilder.build()` to validate its single member ID
+  - Use the `Members` container version of the validation function
+  - Call `validate_member_shape_ids_with_members` with `shape.members()`
 
-19. **MIXIN-019: Add documentation**
-    - Update module documentation to explain mixin support
-    - Add examples to the documentation
-    - Update README if necessary
+- [ ] **BUILD-6**: Update `SetShapeBuilder.build()` to validate its single member ID
+  - Use the `Members` container version of the validation function
+  - Call `validate_member_shape_ids_with_members` with `shape.members()`
 
-20. **MIXIN-020: Performance optimization**
-    - Profile mixin resolution performance
-    - Optimize if necessary
-    - Add benchmarks for mixin resolution
+- [ ] **BUILD-7**: Update `MapShapeBuilder.build()` to validate its key and value member IDs
+  - Use the `Members` container version of the validation function
+  - Call `validate_member_shape_ids_with_members` with `shape.members()`
 
-#### Phase 5: Cleanup
+### to_builder() Method Updates
 
-21. **MIXIN-021: Look for opportunities to commonize**
-    - Java uses an EntityShape and EntityShapeBuilder for shapes like service and resource that have common fields (operations, resources)
-    - We are taking `Vec<T>` in our builders in several places (e.g. ResourceShapeBuilder::collection_operations) we should be consistent and use `impl Into<Iter<Item=ShapeId>>` or simiilar
-    - Missing `to_builder()` for some of our shapes e.g. StructureShape and possibly others
+- [ ] **TOBUILDER-1**: Update `StructureShape.to_builder()` to use `separate_mixin_members`
+  - Replace the current implementation with one that uses the utility function
+
+- [ ] **TOBUILDER-2**: Update `UnionShape.to_builder()` to use `separate_mixin_members`
+  - Follow the same pattern as `StructureShape.to_builder()`
+
+- [ ] **TOBUILDER-3**: Update `EnumShape.to_builder()` to use `separate_mixin_members`
+  - Follow the same pattern as `StructureShape.to_builder()`
+
+- [ ] **TOBUILDER-4**: Update `IntEnumShape.to_builder()` to use `separate_mixin_members`
+  - Follow the same pattern as `StructureShape.to_builder()`
+
+### Tests
+
+- [ ] **TEST-1**: Add test for `validate_member_shape_ids` in `shape/builder_test.rs`
+  - Test valid member IDs
+  - Test invalid member IDs (wrong shape ID)
+  - Test invalid member IDs (wrong member name)
+
+- [ ] **TEST-2**: Add test for `separate_mixin_members` in `shape/mixin_test.rs`
+  - Test with local members only
+  - Test with mixin members
+  - Test with mixin members that have local traits
+  - Test the optimization for no mixin members
+
+- [ ] **TEST-3**: Add test for `StructureShape.to_builder()` with mixins in `mixin_test.rs`
+  - Test that local members are preserved
+  - Test that mixin members are excluded
+  - Test that mixin members with local traits are preserved
+  - Example test:
+    ```rust
+    #[test]
+    fn test_structure_shape_to_builder_with_mixins() {
+        // Create a mixin structure with members and traits
+        let mixin_member = MemberShape::builder()
+            .id("example#MixinStruct$mixinMember")
+            .member_name("mixinMember")
+            .target(shape_id("smithy.api", "String"))
+            .documentation("Mixin member documentation")
+            .build()
+            .unwrap();
+
+        let mixin = StructureShape::builder()
+            .id("example#MixinStruct")
+            .member(mixin_member)
+            .documentation("Mixin documentation")
+            .with_trait(Mixin::new())
+            .build()
+            .unwrap();
+
+        // Create a structure that uses the mixin
+        let local_member = MemberShape::builder()
+            .id("example#MyStruct$localMember")
+            .member_name("localMember")
+            .target(shape_id("smithy.api", "Integer"))
+            .required()
+            .build()
+            .unwrap();
+
+        let structure = StructureShape::builder()
+            .id("example#MyStruct")
+            .member(local_member)
+            .mixin(mixin.clone())
+            .documentation("Local documentation")
+            .build()
+            .unwrap();
+
+        // Verify that the structure has both members
+        assert_eq!(structure.members().len(), 2);
+        assert!(structure.members().contains("mixinMember"));
+        assert!(structure.members().contains("localMember"));
+
+        // Convert back to a builder
+        let structure_builder = structure.to_builder();
+
+        // The builder should only have the local member
+        assert_eq!(structure_builder.members.len(), 1);
+        assert!(!structure_builder.members.contains_key("mixinMember"));
+        assert!(structure_builder.members.contains_key("localMember"));
+
+        // Build again without adding the mixin
+        let structure2 = structure_builder.build().unwrap();
+        
+        // Should only have the local member
+        assert_eq!(structure2.members().len(), 1);
+        assert!(structure2.members().contains("localMember"));
+        assert!(!structure2.members().contains("mixinMember"));
+        
+        // Now test the case where a mixin member has locally introduced traits
+        
+        // Create a structure with a mixin
+        let structure = StructureShape::builder()
+            .id("example#MyStruct")
+            .mixin(mixin.clone())
+            .build()
+            .unwrap();
+            
+        // Get the mixin member and add a trait to it
+        let mut structure_with_modified_mixin = structure.clone();
+        let mixin_member = structure_with_modified_mixin.members.get_mut("mixinMember").unwrap();
+        mixin_member.traits_mut().insert(Box::new(Required));
+        
+        // Convert back to a builder
+        let structure_builder = structure_with_modified_mixin.to_builder();
+        
+        // The builder should have the mixin member because it has locally introduced traits
+        assert_eq!(structure_builder.members.len(), 1);
+        assert!(structure_builder.members.contains_key("mixinMember"));
+        
+        // Build again without adding the mixin
+        let structure3 = structure_builder.build().unwrap();
+        
+        // Should still have the mixin member because it was included in the builder
+        assert_eq!(structure3.members().len(), 1);
+        assert!(structure3.members().contains("mixinMember"));
+    }
+    ```
+
+- [ ] **TEST-4**: Add test for `UnionShape.to_builder()` with mixins in `mixin_test.rs`
+  - Follow the same pattern as the `StructureShape` test
+
+- [ ] **TEST-5**: Add test for `EnumShape.to_builder()` with mixins in `mixin_test.rs`
+  - Follow the same pattern as the `StructureShape` test
+
+- [ ] **TEST-6**: Add test for `IntEnumShape.to_builder()` with mixins in `mixin_test.rs`
+  - Follow the same pattern as the `StructureShape` test
+
+## Implementation Notes
+
+- Each task is designed to be small and focused, allowing for incremental implementation
+- Tasks should be completed in order, as later tasks may depend on earlier ones
+- After completing each task, run tests to ensure everything works correctly
+- Update this document as tasks are completed or if new tasks are identified
+
+## Completed Tasks
+
+- [x] **MIXIN-1**: Implement basic mixin support in `ShapeMetadata`
+- [x] **MIXIN-2**: Implement `compute_effective_traits` function
+- [x] **MIXIN-3**: Implement `compute_effective_members` function
+- [x] **MIXIN-4**: Add validation for mixin shape types
+- [x] **MIXIN-5**: Consolidate shape traits into `ShapeProperties`
+- [x] **MIXIN-6**: Enhance builder pattern for mixins
+- [x] **MIXIN-7**: Create `define_trait` macro for simple traits
