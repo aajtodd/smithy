@@ -40,6 +40,23 @@ impl Model {
             knowledge_indexes: RwLock::new(HashMap::new()),
         }
     }
+
+    /// Returns the number of shapes in the model.
+    pub fn shape_count(&self) -> usize {
+        self.shapes.len()
+    }
+
+    /// Gets a shape by ID.
+    pub fn get_shape(&self, id: impl AsRef<ShapeId>) -> Option<&Shape> {
+        self.shapes.get(id.as_ref())
+    }
+
+    /// Gets a shape by ID, panicking if not found.
+    pub fn expect_shape(&self, id: impl AsRef<ShapeId>) -> &Shape {
+        let id_ref = id.as_ref();
+        self.get_shape(id_ref)
+            .unwrap_or_else(|| panic!("Shape not found: {}", id_ref))
+    }
 }
 
 impl Default for Model {
@@ -55,5 +72,62 @@ impl Clone for Model {
             metadata: self.metadata.clone(),
             knowledge_indexes: RwLock::new(HashMap::new()), // Start with fresh knowledge indexes
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::shape::{ShapeProperties, StringShape};
+
+    #[test]
+    fn test_empty_model() {
+        let model = Model::new();
+        assert_eq!(model.shape_count(), 0);
+    }
+
+    #[test]
+    fn test_get_shape() {
+        let mut model = Model::new();
+        let shape = StringShape::builder()
+            .id("example.foo#MyString")
+            .build()
+            .unwrap();
+
+        // TODO - use yet to exist builder API
+        model
+            .shapes
+            .insert(shape.id().clone(), shape.clone().into());
+
+        let retrieved = model.get_shape(shape.id());
+        assert!(retrieved.is_some());
+
+        let non_existent_id = ShapeId::new_unchecked("example.foo#NonExistent");
+        let non_existent = model.get_shape(&non_existent_id);
+        assert!(non_existent.is_none());
+    }
+
+    #[test]
+    fn test_expect_shape() {
+        let mut model = Model::new();
+        let shape = StringShape::builder()
+            .id("example.foo#MyString")
+            .build()
+            .unwrap();
+
+        model
+            .shapes
+            .insert(shape.id().clone(), shape.clone().into());
+
+        let retrieved = model.expect_shape(shape.id());
+        assert_eq!(retrieved.id(), shape.id());
+    }
+
+    #[test]
+    #[should_panic(expected = "Shape not found")]
+    fn test_expect_shape_panics() {
+        let model = Model::new();
+        let non_existent_id = ShapeId::new_unchecked("example.foo#NonExistent");
+        model.expect_shape(&non_existent_id);
     }
 }
